@@ -1,0 +1,27 @@
+# Visual Studio Project User File
+*.csproj.user
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+bin/
+obj/
+*.pdb
+
+# Packages
+*.nupkg
+*.snupkg
+*.appx
+*.msi
+*.msp
+*.resharper
+*.kdev4
+
+# Misc
+*.log
+*.bak
+*.tmp
+
+# OS generated files
+.DS_Store
+thumbs.db

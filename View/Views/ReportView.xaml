@@ -1,0 +1,72 @@
+<UserControl x:Class="GSRP.View.Views.ReportView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:conv="clr-namespace:GSRP.Converters"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <conv:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter"/>
+    </UserControl.Resources>
+    <Grid>
+        <Grid Background="#1e1f23" Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="Player Report" 
+                       Style="{StaticResource HeaderText}"
+                       Margin="0,0,0,20"/>
+
+            <DockPanel Grid.Row="1" Margin="0,0,0,16">
+                <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Server:" Style="{StaticResource SubtleText}" VerticalAlignment="Center"/>
+                    <ComboBox Grid.Column="1" 
+                              ItemsSource="{Binding ServerList}"
+                              SelectedItem="{Binding SelectedServer}"
+                              Margin="12,0,0,0"/>
+                </Grid>
+
+                <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Nickname:" Style="{StaticResource SubtleText}" VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="1" Text="{Binding ReportNickname, UpdateSourceTrigger=PropertyChanged}" Margin="12,0,0,0"/>
+                </Grid>
+
+                <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="SteamID:" Style="{StaticResource SubtleText}" VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="1" Text="{Binding ReportSteamId, UpdateSourceTrigger=PropertyChanged}" Margin="12,0,0,0"/>
+                </Grid>
+
+                <TextBlock DockPanel.Dock="Top" Text="What Happened:" Style="{StaticResource SubtleText}" Margin="0,8,0,8"/>
+
+                <TextBox Style="{StaticResource MultilineTextBox}"
+                         Text="{Binding ReportDetails, UpdateSourceTrigger=PropertyChanged}"
+                         Padding="12"/>
+            </DockPanel>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Open Screenshots Folder" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                <Button Content="Open Videos Folder" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                <Button Content="Copy Report" Command="{Binding CopyReportCommand}"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -1,0 +1,100 @@
+<UserControl x:Class="GSRP.View.Views.DatabaseSearchView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:GSRP.View.Views"
+             xmlns:controls="clr-namespace:GSRP.Views.Controls"
+             xmlns:ui="http://schemas.modernwpf.com/2019"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+    <Grid Background="#1e1f23">
+        <DockPanel>
+            <!-- Search Bar -->
+            <Border DockPanel.Dock="Top" Padding="12" Background="#141518" BorderBrush="#2d2e33" BorderThickness="0,0,0,1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Grid Grid.Column="0">
+                                                <TextBox x:Name="DbSearchBox" Text="{Binding DbSearchTerm, UpdateSourceTrigger=PropertyChanged}" KeyDown="SearchBox_KeyDown" VerticalAlignment="Center" FontSize="14">
+                            <TextBox.ContextMenu>
+                                <ContextMenu Style="{StaticResource ThemedContextMenu}">
+                                    <MenuItem Command="ApplicationCommands.Cut" Style="{StaticResource ThemedMenuItem}"/>
+                                    <MenuItem Command="ApplicationCommands.Copy" Style="{StaticResource ThemedMenuItem}"/>
+                                    <MenuItem Command="ApplicationCommands.Paste" Style="{StaticResource ThemedMenuItem}"/>
+                                </ContextMenu>
+                            </TextBox.ContextMenu>
+                        </TextBox>
+                        <TextBlock Text="Search by ID/Alias/Name. Note: In-Game Name is the same as Steam Name." Foreground="#6b7280" IsHitTestVisible="False" VerticalAlignment="Center" Margin="12,0,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Text, ElementName=DbSearchBox}" Value="">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <Button Command="{Binding ClearDbSearchTextCommand}"
+                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                Width="20" Height="20" Margin="0,0,8,0"
+                                Cursor="Hand"
+                                Visibility="{Binding Text, ElementName=DbSearchBox, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}}">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="Transparent" CornerRadius="10">
+                                                    <TextBlock Text="✕" Foreground="#8b929a" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Opacity" Value="0.7"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
+                    
+                    <Button Grid.Column="1" Content="Search" Command="{Binding SearchDatabaseCommand}" Margin="8,0,0,0"/>
+
+                    <CheckBox Grid.Column="2" Content="Exact match" IsChecked="{Binding DbSearchExactMatch}" VerticalAlignment="Center" Margin="16,0,0,0"/>
+
+                    <ui:ProgressRing Grid.Column="3" IsActive="{Binding SearchDatabaseCommand.IsRunning}" 
+                                     Visibility="{Binding SearchDatabaseCommand.IsRunning, Converter={StaticResource BoolToVis}}"
+                                     Margin="8,0,0,0" Width="24" Height="24"
+                                     Foreground="#3b82f6"/>
+                </Grid>
+            </Border>
+
+            <!-- Search Results -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding DbSearchResults}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <controls:PlayerCard DataContext="{Binding}"
+                                                 Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </DockPanel>
+    </Grid>
+</UserControl>
