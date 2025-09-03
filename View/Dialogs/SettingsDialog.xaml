@@ -208,6 +208,16 @@
                             <Button x:Name="ChangeApiKeyButton" Grid.Column="2" Content="Change / Add Key" Style="{StaticResource SecondaryButton}" Click="ChangeApiKeyButton_Click"/>
                             <Button x:Name="DeleteApiKeyButton" Grid.Column="4" Content="Delete Key" Style="{StaticResource DangerButton}" Click="DeleteApiKeyButton_Click"/>
                         </Grid>
+
+                        <CheckBox IsChecked="{Binding CurrentSettings.EnablePeriodicVacCheck, Mode=TwoWay}" 
+                                  Margin="0,12,0,0"
+                                  Content="Enable periodic VAC status checks">
+                            <CheckBox.ToolTip>
+                                <ToolTip>
+                                    <TextBlock Text="When processing a player list, automatically re-check players whose VAC status&#x0a;hasn't been updated in over 24 hours. Requires an API key."/>
+                                </ToolTip>
+                            </CheckBox.ToolTip>
+                        </CheckBox>
                     </StackPanel>
 
                     <!-- Appearance Section -->

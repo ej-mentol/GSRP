@@ -14,7 +14,13 @@ namespace GSRP.Services
         string PersonaName,
         long LastUpdated,
         string IconName,
-        ProfileStatus ProfileStatus
+        ProfileStatus ProfileStatus,
+        bool IsCommunityBanned,
+        int NumberOfVacBans,
+        long LastVacCheck,
+        string EconomyBan,
+        long BanDate,
+        Color? AliasColor
     );
 
     public record PlayerSearchResult(string SteamId64, PlayerDbData Data);
@@ -29,12 +35,15 @@ namespace GSRP.Services
         Task SetAliasAsync(long steamId64, string alias);
         Task SetTextColorAsync(long steamId64, Color color);
         Task SetPersonaNameColorAsync(long steamId64, Color color);
+        Task SetAliasColorAsync(long steamId64, Color color);
         Task RemoveTextColorAsync(long steamId64);
         Task RemovePersonaNameColorAsync(long steamId64);
+        Task RemoveAliasColorAsync(long steamId64);
         Task SetAvatarHashAsync(long steamId64, string avatarHash);
         Task SetTimeCreatedAsync(long steamId64, uint timeCreated);
         Task SetPersonaNameAsync(long steamId64, string personaName);
         Task SetProfileStatusAsync(long steamId64, ProfileStatus profileStatus);
         Task SetLastUpdatedAsync(long steamId64, long timestamp);
+        Task UpdatePlayerBanStatusAsync(long steamId64, bool isCommunityBanned, string economyBan, int numberOfVacBans, long banDate, long lastVacCheck);
     }
 }

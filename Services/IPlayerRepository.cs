@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows.Media;
 using GSRP.Models;
-
 namespace GSRP.Services
 {
     public interface IPlayerRepository : IDisposable
@@ -17,9 +16,12 @@ namespace GSRP.Services
         Task SetPlayerIconAsync(Player player, string iconName);
         Task RemovePlayerColorAsync(Player player);
         Task RemovePlayerPersonaNameColorAsync(Player player);
-        
+        Task SetPlayerAliasColorAsync(Player player, Color color);
+        Task RemovePlayerAliasColorAsync(Player player);
+
         string GetAvatarPath(string avatarHash);
         Task ForceEnrichCurrentPlayersAsync(CancellationToken token);
+        Task EnrichSinglePlayerVacStatusAsync(Player player, CancellationToken token);
         Task<List<Player>> SearchPlayersAsync(string searchTerm, string? steamId64Term, bool exactMatch);
     }
 }

@@ -15,6 +15,9 @@
         <conv:IconOffsetToMarginConverter x:Key="IconOffsetToMargin"/>
         <conv:TupleConverter x:Key="TupleConverter"/>
         <conv:PathToImageConverter x:Key="PathToImage"/>
+        <conv:IsGreaterThanZeroConverter x:Key="IsGreaterThanZeroConverter"/>
+        <conv:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter"/>
+        <conv:BanTooltipConverter x:Key="BanTooltipConverter"/>
     </UserControl.Resources>
 
     <Border x:Name="MainBorder"
@@ -88,29 +91,12 @@
                     </MenuItem.Icon>
                 </MenuItem>
 
-                <MenuItem Header="Copy as Report"
-                          Style="{StaticResource ThemedMenuItem}"
-                          ItemsSource="{Binding PlacementTarget.Tag.ServerList, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                <MenuItem Header="Copy as Report" Style="{StaticResource ThemedMenuItem}" x:Name="CopyAsReportMenuItem" IsEnabled="False">
                     <MenuItem.Icon>
                         <Border Background="#d946ef" CornerRadius="3" Width="16" Height="16">
                             <TextBlock Text="📜" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                     </MenuItem.Icon>
-                    <MenuItem.ItemContainerStyle>
-                        <Style TargetType="MenuItem" BasedOn="{StaticResource ThemedMenuItem}">
-                            <Setter Property="Header" Value="{Binding}"/>
-                            <EventSetter Event="Click" Handler="SubMenuItem_Click"/>
-                            <Setter Property="Command" Value="{Binding Path=PlacementTarget.Tag.CopyReportForServerCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                            <Setter Property="CommandParameter">
-                                <Setter.Value>
-                                    <MultiBinding Converter="{StaticResource TupleConverter}">
-                                        <Binding Path="DataContext" RelativeSource="{RelativeSource AncestorType=controls:PlayerCard}"/>
-                                        <Binding />
-                                    </MultiBinding>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </MenuItem.ItemContainerStyle>
                 </MenuItem>
 
                 <Separator/>
@@ -140,6 +126,17 @@
                 <MenuItem Header="Change Steam Color"
                           Style="{StaticResource ThemedMenuItem}"
                           Command="{Binding PlacementTarget.Tag.SetPlayerSteamColorAsyncCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                    <MenuItem.Icon>
+                        <Border Background="#ec4899" CornerRadius="3" Width="16" Height="16">
+                            <TextBlock Text="🎨" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </MenuItem.Icon>
+                </MenuItem>
+
+                <MenuItem Header="Change Alias Color"
+                          Style="{StaticResource ThemedMenuItem}"
+                          Command="{Binding PlacementTarget.Tag.SetPlayerAliasColorAsyncCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
                     <MenuItem.Icon>
                         <Border Background="#ec4899" CornerRadius="3" Width="16" Height="16">
@@ -296,7 +293,18 @@
                             </Style>
                         </Image.Style>
                     </Image>
-                    <TextBlock Text="{Binding Name}" Foreground="{Binding PlayerColorBrush, TargetNullValue=#f8fafc}" FontWeight="SemiBold" FontSize="17" FontFamily="Segoe UI"/>
+                    <TextBlock Foreground="{Binding PlayerColorBrush, TargetNullValue=#f8fafc}" FontWeight="SemiBold" FontSize="17" FontFamily="Segoe UI">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="{Binding DisplayNameForUI}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DisplayNameForUI}" Value="Unknown">
+                                        <Setter Property="FontStyle" Value="Italic"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                     <Image Source="{Binding IconPath, Converter={StaticResource StringToImage}}" Width="16" Height="16" Margin="5,0,0,0">
                         <Image.Style>
                             <Style TargetType="Image">
@@ -313,7 +321,7 @@
                             </Style>
                         </Image.Style>
                     </Image>
-                    <Border Background="#3b82f6" CornerRadius="6" Padding="8,3" Margin="10,0,0,0" Visibility="{Binding HasAlias, Converter={StaticResource BoolToVis}}">
+                    <Border Background="{Binding AliasColorBrush, TargetNullValue=#3b82f6}" CornerRadius="6" Padding="8,3" Margin="10,0,0,0" Visibility="{Binding HasAlias, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="{Binding Alias}" Foreground="White" FontSize="12" FontWeight="Medium"/>
                     </Border>
                     <Image Source="{Binding IconPath, Converter={StaticResource StringToImage}}" Width="16" Height="16" Margin="5,0,0,0">
@@ -334,9 +342,54 @@
                     </Image>
                 </StackPanel>
 
-                <TextBlock Text="{Binding SteamId2}" Foreground="#a6a8ab" FontFamily="Consolas" FontSize="14" Margin="0,0,0,3"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                    <TextBlock Text="{Binding SteamId2}" Foreground="#a6a8ab" FontFamily="Consolas" FontSize="14" VerticalAlignment="Center"/>
+                    <Grid Margin="8,0,0,0">
+                        <!-- Ban Icons Panel -->
+                        <StackPanel Orientation="Horizontal">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsCheckingBans}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                                                            <StackPanel.ToolTip>
+                                <ToolTip DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                    <StackPanel>
+                                        <TextBlock Text="Ban Status" FontWeight="Bold" Margin="0,0,0,5"/>
+                                        <TextBlock>
+                                            <TextBlock.Text>
+                                                <MultiBinding Converter="{StaticResource BanTooltipConverter}">
+                                                    <Binding Path="BanDate"/>
+                                                    <Binding Path="NumberOfVacBans"/>
+                                                    <Binding Path="IsCommunityBanned"/>
+                                                    <Binding Path="EconomyBan"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </ToolTip>
+                            </StackPanel.ToolTip>
+                            <ui:FontIcon Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" Foreground="#ef4444" FontSize="14" Visibility="{Binding IsVacBanned, Converter={StaticResource BoolToVis}}" Margin="0,0,4,0"/>
+                            <ui:FontIcon Glyph="&#xE716;" FontFamily="Segoe MDL2 Assets" Foreground="#ef4444" FontSize="14" Visibility="{Binding IsCommunityBanned, Converter={StaticResource BoolToVis}}" Margin="0,0,4,0"/>
+                            <ui:FontIcon Glyph="&#xE7BF;" FontFamily="Segoe MDL2 Assets" Foreground="#ef4444" FontSize="14" Visibility="{Binding EconomyBan, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}, ConverterParameter='none'}"/>
+                        </StackPanel>
+
+                        <!-- VAC Ban Checking Text -->
+                        <TextBlock Text="VAC Ban checking..."
+                                   Foreground="#a6a8ab"
+                                   FontStyle="Italic"
+                                   FontSize="14"
+                                   VerticalAlignment="Center"
+                                   Visibility="{Binding IsCheckingBans, Converter={StaticResource BoolToVis}}"/>
+                    </Grid>
+                </StackPanel>
                 
-                <Grid>
+                <Grid MinHeight="20">
                     <TextBlock Text="Updating..."
                                Foreground="#a6a8ab"
                                FontStyle="Italic"
@@ -344,21 +397,17 @@
                                FontFamily="Segoe UI"
                                Visibility="{Binding IsUpdating, Converter={StaticResource BoolToVis}}"/>
 
-                    <TextBlock Text="{Binding PersonaName}"
+                    <TextBlock Text="{Binding DisplayPersonaName}"
                                Foreground="{Binding PersonaNameColorBrush, TargetNullValue=#629BF8}"
                                FontSize="15"
                                FontFamily="Segoe UI">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
-                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Setter Property="Visibility" Value="Visible"/> <!-- Default to visible -->
                                 <Style.Triggers>
-                                    <MultiDataTrigger>
-                                        <MultiDataTrigger.Conditions>
-                                            <Condition Binding="{Binding IsUpdating}" Value="False"/>
-                                            <Condition Binding="{Binding HasPersonaName}" Value="True"/>
-                                        </MultiDataTrigger.Conditions>
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </MultiDataTrigger>
+                                    <DataTrigger Binding="{Binding IsUpdating}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </TextBlock.Style>
@@ -403,52 +452,28 @@
                         </Style>
                     </ui:FontIcon.Style>
                 </ui:FontIcon>
-                <TextBlock FontSize="14" FontWeight="Medium" FontFamily="Segoe UI">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Text" Value="{Binding RegistrationDateString}"/>
-                            <Setter Property="Foreground" Value="{Binding DateColorBrush}"/>
-                            <Style.Triggers>
-                                <MultiDataTrigger>
-                                    <MultiDataTrigger.Conditions>
-                                        <Condition Binding="{Binding TimeCreated}" Value="0"/>
-                                        <Condition Binding="{Binding ProfileStatus}" Value="Private"/>
-                                    </MultiDataTrigger.Conditions>
-                                    <Setter Property="Text" Value="Private Profile"/>
-                                    <Setter Property="Foreground" Value="#a6a8ab"/>
-                                </MultiDataTrigger>
-                                <MultiDataTrigger>
-                                    <MultiDataTrigger.Conditions>
-                                        <Condition Binding="{Binding TimeCreated}" Value="0"/>
-                                        <Condition Binding="{Binding ProfileStatus}" Value="NotFound"/>
-                                    </MultiDataTrigger.Conditions>
-                                    <Setter Property="Text" Value="Profile Not Found"/>
-                                    <Setter Property="Foreground" Value="#a6a8ab"/>
-                                </MultiDataTrigger>
-                                <MultiDataTrigger>
-                                    <MultiDataTrigger.Conditions>
-                                        <Condition Binding="{Binding TimeCreated}" Value="0"/>
-                                        <Condition Binding="{Binding ProfileStatus}" Value="Public"/>
-                                    </MultiDataTrigger.Conditions>
-                                    <Setter Property="Text" Value=""/>
-                                </MultiDataTrigger>
-                                <MultiDataTrigger>
-                                    <MultiDataTrigger.Conditions>
-                                        <Condition Binding="{Binding TimeCreated}" Value="0"/>
-                                        <Condition Binding="{Binding ProfileStatus}" Value="Unknown"/>
-                                    </MultiDataTrigger.Conditions>
-                                    <Setter Property="Text" Value=""/>
-                                </MultiDataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
+                <TextBlock Text="{Binding RegistrationStatusDisplay}"
+                           Foreground="{Binding RegistrationStatusColorBrush}"
+                           FontSize="14"
+                           FontWeight="Medium"
+                           FontFamily="Segoe UI" />
             </StackPanel>
 
-            <Button Grid.Column="3" Style="{StaticResource MenuButtonStyle}">
+            <Button Grid.Column="3" 
+                    Style="{StaticResource MenuButtonStyle}" 
+                    Tag="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=Tag}"
+                    Click="MenuButton_Click">
                 <Button.ContextMenu>
-                    <ContextMenu Style="{StaticResource ThemedContextMenu}" DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
-                        <MenuItem Header="More..." Style="{StaticResource ThemedMenuItem}" IsEnabled="False"/>
+                    <ContextMenu Style="{StaticResource ThemedContextMenu}" x:Name="MenuButtonContextMenu">
+                        <MenuItem Header="Update VAC Status"
+                                  Style="{StaticResource ThemedMenuItem}"
+                                  Click="UpdateVacStatus_Click">
+                            <MenuItem.Icon>
+                                <Border Background="#3b82f6" CornerRadius="3" Width="16" Height="16">
+                                    <TextBlock Text="🔄" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </MenuItem.Icon>
+                        </MenuItem>
                     </ContextMenu>
                 </Button.ContextMenu>
 

@@ -118,5 +118,38 @@ namespace GSRP.Services
                 return new EnrichmentResult { Success = false, ErrorMessage = $"An unexpected error occurred: {ex.Message}" };
             }
         }
+
+        public async Task<List<PlayerBanData>?> GetPlayerBansAsync(List<Player> players, CancellationToken cancellationToken)
+        {
+            var apiKey = _apiKeyService.GetApiKey();
+            if (string.IsNullOrEmpty(apiKey) || !players.Any())
+            {
+                return null;
+            }
+
+            try
+            {
+                var ids = string.Join(",", players.Select(p => p.SteamId64));
+                var requestUrl = $"https://api.steampowered.com/ISteamUser/GetPlayerBans/v1/?key={apiKey}&steamids={ids}";
+
+                var response = await _httpClient.GetAsync(requestUrl, cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    // Don't bother the user with errors here, just log it.
+                    System.Diagnostics.Debug.WriteLine($"Steam API (GetPlayerBans) returned an error: {response.ReasonPhrase}");
+                    return null;
+                }
+
+                var json = await response.Content.ReadAsStringAsync(cancellationToken);
+                var result = JsonSerializer.Deserialize<PlayerBansRoot>(json);
+                return result?.Players;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                System.Diagnostics.Debug.WriteLine($"Steam API (GetPlayerBans) error: {ex.Message}");
+                return null;
+            }
+        }
     }
 }

@@ -2,6 +2,15 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework">
 
+    <Style TargetType="ToolTip">
+        <Setter Property="Background" Value="#2d2e33"/>
+        <Setter Property="BorderBrush" Value="#4a4a4e"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#f8fafc"/>
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="Placement" Value="Top"/>
+    </Style>
+
     <!-- SecondaryButton Style -->
     <Style x:Key="SecondaryButton" TargetType="Button">
         <Setter Property="Background" Value="#262629"/>

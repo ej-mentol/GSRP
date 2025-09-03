@@ -12,6 +12,7 @@ public partial class Player : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DisplayName))]
     [NotifyPropertyChangedFor(nameof(Initials))]
+    [NotifyPropertyChangedFor(nameof(DisplayNameForUI))]
     private string _name = string.Empty;
 
     [ObservableProperty]
@@ -28,6 +29,7 @@ public partial class Player : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPersonaName))]
     [NotifyPropertyChangedFor(nameof(DetailText))]
+    [NotifyPropertyChangedFor(nameof(DisplayPersonaName))] // Added this line
     private string _personaName = string.Empty;
 
     [ObservableProperty]
@@ -39,6 +41,8 @@ public partial class Player : ObservableObject
     [NotifyPropertyChangedFor(nameof(AccountAge))]
     [NotifyPropertyChangedFor(nameof(DateColorBrush))]
     [NotifyPropertyChangedFor(nameof(DetailText))]
+    [NotifyPropertyChangedFor(nameof(RegistrationStatusDisplay))]
+    [NotifyPropertyChangedFor(nameof(RegistrationStatusColorBrush))]
     private uint _timeCreated;
 
     [ObservableProperty]
@@ -48,6 +52,10 @@ public partial class Player : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PersonaNameColorBrush))]
     private Color? _personaNameColor;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AliasColorBrush))]
+    private Color? _aliasColor;
 
     [ObservableProperty]
     private string _iconName = string.Empty;
@@ -68,12 +76,44 @@ public partial class Player : ObservableObject
     private bool _avatarDownloadFailed;
 
     [ObservableProperty]
+    private bool _isCheckingBans;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ProfileStatusText))]
+    [NotifyPropertyChangedFor(nameof(RegistrationStatusDisplay))]
     private ProfileStatus _profileStatus = ProfileStatus.Unknown;
+
+    public bool IsVacBanned => NumberOfVacBans > 0;
+
+    [ObservableProperty]
+    private bool _isCommunityBanned;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsVacBanned))]
+    private int _numberOfVacBans;
+
+    [ObservableProperty]
+    private long _lastVacCheck;
+
+    [ObservableProperty]
+    private string _economyBan = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DaysSinceLastBan))]
+    private long _banDate;
+
+    private long _lastUpdatedBackingField; // Renamed backing field
+
+    public long LastUpdated // Explicit public property
+    {
+        get => _lastUpdatedBackingField;
+        set => SetProperty(ref _lastUpdatedBackingField, value);
+    }
 
     // --- Private fields for cached brushes ---
     private SolidColorBrush? _playerColorBrush;
     private SolidColorBrush? _personaNameColorBrush;
+    private SolidColorBrush? _aliasColorBrush;
     private SolidColorBrush? _dateColorBrush;
     private int _previousAccountAge = -1;
 
@@ -84,7 +124,11 @@ public partial class Player : ObservableObject
 
     // --- Calculated & UI Properties ---
 
-    public string DisplayName => !string.IsNullOrEmpty(Alias) ? $"{Name} ({Alias})" : Name;
+    public string DisplayNameForUI => string.IsNullOrWhiteSpace(Name) ? "Unknown" : Name;
+
+    public int DaysSinceLastBan => BanDate == 0 ? -1 : (int)(DateTime.Now - DateTimeOffset.FromUnixTimeSeconds(BanDate).DateTime).TotalDays;
+
+    public string DisplayName => !string.IsNullOrEmpty(Alias) ? $"{Name} ({Alias})" : Name ?? PersonaName ?? "Unknown";
 
     public string DetailText
     {
@@ -111,6 +155,36 @@ public partial class Player : ObservableObject
 
     public int AccountAge => RegistrationDate == DateTime.MinValue ? -1 : (DateTime.Now - RegistrationDate).Days;
 
+    public string RegistrationStatusDisplay
+    {
+        get
+        {
+            if (TimeCreated > 0)
+            {
+                return DateTimeOffset.FromUnixTimeSeconds(TimeCreated).DateTime.ToString("dd.MM.yyyy");
+            }
+
+            return ProfileStatus switch
+            {
+                ProfileStatus.Private => "Private Profile",
+                ProfileStatus.NotFound => "Profile Not Found",
+                _ => "Unknown"
+            };
+        }
+    }
+
+    public Brush RegistrationStatusColorBrush
+    {
+        get
+        {
+            if (TimeCreated > 0)
+            {
+                return DateColorBrush;
+            }
+            return new SolidColorBrush(Color.FromRgb(166, 168, 171)); // #a6a8ab
+        }
+    }
+
     public string Initials
     {
         get
@@ -133,6 +207,8 @@ public partial class Player : ObservableObject
         _ => string.Empty
     };
 
+    public string DisplayPersonaName => string.IsNullOrEmpty(PersonaName) ? "Unknown" : PersonaName; // New property
+
     public SolidColorBrush? PlayerColorBrush
     {
         get
@@ -148,18 +224,32 @@ public partial class Player : ObservableObject
     }
 
     public SolidColorBrush? PersonaNameColorBrush
-    {
-        get
         {
-            if (_personaNameColorBrush == null && PersonaNameColor.HasValue)
+            get
             {
-                var brush = new SolidColorBrush(PersonaNameColor.Value);
-                brush.Freeze();
-                _personaNameColorBrush = brush;
+                if (_personaNameColorBrush == null && PersonaNameColor.HasValue)
+                {
+                    var brush = new SolidColorBrush(PersonaNameColor.Value);
+                    brush.Freeze();
+                    _personaNameColorBrush = brush;
+                }
+                return _personaNameColorBrush;
             }
-            return _personaNameColorBrush;
         }
-    }
+
+        public SolidColorBrush? AliasColorBrush
+        {
+            get
+            {
+                if (_aliasColorBrush == null && AliasColor.HasValue)
+                {
+                    var brush = new SolidColorBrush(AliasColor.Value);
+                    brush.Freeze();
+                    _aliasColorBrush = brush;
+                }
+                return _aliasColorBrush;
+            }
+        }
 
     public SolidColorBrush DateColorBrush
     {
@@ -199,6 +289,11 @@ public partial class Player : ObservableObject
         _personaNameColorBrush = null;
     }
 
+    partial void OnAliasColorChanged(Color? value)
+    {
+        _aliasColorBrush = null;
+    }
+
     partial void OnSteamId64Changed(string value)
     {
         GenerateFallbackBrush();
@@ -229,8 +324,16 @@ public partial class Player : ObservableObject
         _avatarHash = other._avatarHash;
         _timeCreated = other._timeCreated;
         _playerColor = other._playerColor;
+        _personaNameColor = other._personaNameColor;
+        _aliasColor = other._aliasColor;
         _iconName = other._iconName;
         _profileStatus = other._profileStatus;
+        _isCommunityBanned = other._isCommunityBanned;
+        _numberOfVacBans = other._numberOfVacBans;
+        _lastVacCheck = other._lastVacCheck;
+        _economyBan = other._economyBan;
+        _banDate = other._banDate;
+        LastUpdated = other.LastUpdated; // Use public property
         GenerateFallbackBrush();
     }
 

@@ -1,28 +1,22 @@
 using System;
 using System.Globalization;
-using System.Windows;
 using System.Windows.Data;
 
 namespace GSRP.Converters
 {
-    public class IsNullOrEmptyToVisibilityConverter : IValueConverter
+    public class IsGreaterThanZeroConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            string? valueStr = value as string;
-            string? parameterStr = parameter as string;
-
-            if (string.IsNullOrEmpty(valueStr))
+            if (value is int intValue)
             {
-                return Visibility.Collapsed;
+                return intValue > 0;
             }
-
-            if (parameterStr != null && valueStr == parameterStr)
+            if (value is long longValue)
             {
-                return Visibility.Collapsed;
+                return longValue > 0;
             }
-
-            return Visibility.Visible;
+            return false;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

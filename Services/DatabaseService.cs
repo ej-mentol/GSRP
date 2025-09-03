@@ -13,9 +13,11 @@ namespace GSRP.Services
     public class DatabaseService : IDatabaseService
     {
         private readonly string _connectionString;
+        private readonly IDatabaseMigrationService _migrationService;
 
-        public DatabaseService(IPathProvider pathProvider)
+        public DatabaseService(IPathProvider pathProvider, IDatabaseMigrationService migrationService)
         {
+            _migrationService = migrationService;
             var dbPath = Path.Combine(pathProvider.GetAppDataPath(), "players.db");
             _connectionString = $"Data Source={dbPath};";
             InitializeDatabase();
@@ -26,18 +28,25 @@ namespace GSRP.Services
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
 
+            _migrationService.ApplyMigrations(connection);
+
             var createTableSql = @"
                 CREATE TABLE IF NOT EXISTS players (
                     steam_id64 TEXT PRIMARY KEY,
                     alias TEXT DEFAULT '',
                     txt_color INTEGER DEFAULT 0,
-                    stm_color INTEGER DEFAULT 0,
                     avatarhash TEXT DEFAULT '',
                     timecreated INTEGER DEFAULT 0,
                     personaname TEXT DEFAULT '',
                     last_updated INTEGER DEFAULT 0,
                     iconname TEXT DEFAULT '',
-                    profile_status INTEGER DEFAULT 0
+                    stm_color INTEGER DEFAULT 0,
+                    profile_status INTEGER DEFAULT 0,
+                    is_community_banned INTEGER NOT NULL DEFAULT 0,
+                    number_of_vac_bans INTEGER NOT NULL DEFAULT 0,
+                    last_vac_check INTEGER NOT NULL DEFAULT 0,
+                    economy_ban TEXT NOT NULL DEFAULT 'none',
+                    ban_date INTEGER NOT NULL DEFAULT 0
                 );";
             using (var command = new SqliteCommand(createTableSql, connection))
             {
@@ -59,7 +68,7 @@ namespace GSRP.Services
                 return result;
             }
 
-            var sql = new StringBuilder("SELECT steam_id64, alias, txt_color, stm_color, avatarhash, timecreated, personaname, last_updated, iconname, profile_status FROM players WHERE steam_id64 IN (");
+            var sql = new StringBuilder("SELECT steam_id64, alias, txt_color, stm_color, avatarhash, timecreated, personaname, last_updated, iconname, profile_status, is_community_banned, number_of_vac_bans, last_vac_check, economy_ban, ban_date, alias_color FROM players WHERE steam_id64 IN (");
             var parameters = new List<SqliteParameter>();
             for (int i = 0; i < idList.Count; i++)
             {
@@ -88,7 +97,13 @@ namespace GSRP.Services
                     PersonaName: reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
                     LastUpdated: reader.IsDBNull(7) ? 0 : reader.GetInt64(7),
                     IconName: reader.IsDBNull(8) ? string.Empty : reader.GetString(8),
-                    ProfileStatus: reader.IsDBNull(9) ? ProfileStatus.Unknown : (ProfileStatus)reader.GetInt32(9)
+                    ProfileStatus: reader.IsDBNull(9) ? ProfileStatus.Unknown : (ProfileStatus)reader.GetInt32(9),
+                    IsCommunityBanned: reader.IsDBNull(10) ? false : reader.GetBoolean(10),
+                    NumberOfVacBans: reader.IsDBNull(11) ? 0 : reader.GetInt32(11),
+                    LastVacCheck: reader.IsDBNull(12) ? 0 : reader.GetInt64(12),
+                    EconomyBan: reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
+                    BanDate: reader.IsDBNull(14) ? 0 : reader.GetInt64(14),
+                    AliasColor: ConvertToColor(reader.IsDBNull(15) ? 0 : reader.GetInt64(15))
                 );
             }
 
@@ -133,7 +148,7 @@ namespace GSRP.Services
 
             var whereClause = string.Join(" OR ", conditions);
             var sql = @$"
-                SELECT steam_id64, alias, txt_color, stm_color, avatarhash, timecreated, personaname, last_updated, iconname, profile_status
+                SELECT steam_id64, alias, txt_color, stm_color, avatarhash, timecreated, personaname, last_updated, iconname, profile_status, is_community_banned, number_of_vac_bans, last_vac_check, economy_ban, ban_date, alias_color
                 FROM players
                 WHERE {whereClause};";
 
@@ -155,7 +170,13 @@ namespace GSRP.Services
                     PersonaName: reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
                     LastUpdated: reader.IsDBNull(7) ? 0 : reader.GetInt64(7),
                     IconName: reader.IsDBNull(8) ? string.Empty : reader.GetString(8),
-                    ProfileStatus: reader.IsDBNull(9) ? ProfileStatus.Unknown : (ProfileStatus)reader.GetInt32(9)
+                    ProfileStatus: reader.IsDBNull(9) ? ProfileStatus.Unknown : (ProfileStatus)reader.GetInt32(9),
+                    IsCommunityBanned: reader.IsDBNull(10) ? false : reader.GetBoolean(10),
+                    NumberOfVacBans: reader.IsDBNull(11) ? 0 : reader.GetInt32(11),
+                    LastVacCheck: reader.IsDBNull(12) ? 0 : reader.GetInt64(12),
+                    EconomyBan: reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
+                    BanDate: reader.IsDBNull(14) ? 0 : reader.GetInt64(14),
+                    AliasColor: ConvertToColor(reader.IsDBNull(15) ? 0 : reader.GetInt64(15))
                 );
                 results.Add(new PlayerSearchResult(steamId, dbData));
             }
@@ -219,13 +240,41 @@ namespace GSRP.Services
             return UpsertPlayerFieldAsync(steamId64, "stm_color", colorValue);
         }
 
+        public Task SetAliasColorAsync(long steamId64, Color color)
+        {
+            long colorValue = (uint)(color.A << 24) | (uint)(color.R << 16) | (uint)(color.G << 8) | color.B;
+            return UpsertPlayerFieldAsync(steamId64, "alias_color", colorValue);
+        }
+
         public Task RemoveTextColorAsync(long steamId64) => UpsertPlayerFieldAsync(steamId64, "txt_color", 0);
         public Task RemovePersonaNameColorAsync(long steamId64) => UpsertPlayerFieldAsync(steamId64, "stm_color", 0);
+        public Task RemoveAliasColorAsync(long steamId64) => UpsertPlayerFieldAsync(steamId64, "alias_color", 0);
 
         public Task SetAvatarHashAsync(long steamId64, string avatarHash) => UpsertPlayerFieldAsync(steamId64, "avatarhash", avatarHash);
         public Task SetTimeCreatedAsync(long steamId64, uint timeCreated) => UpsertPlayerFieldAsync(steamId64, "timecreated", timeCreated);
         public Task SetPersonaNameAsync(long steamId64, string personaName) => UpsertPlayerFieldAsync(steamId64, "personaname", personaName);
         public Task SetProfileStatusAsync(long steamId64, ProfileStatus profileStatus) => UpsertPlayerFieldAsync(steamId64, "profile_status", (int)profileStatus);
         public Task SetLastUpdatedAsync(long steamId64, long timestamp) => UpsertPlayerFieldAsync(steamId64, "last_updated", timestamp);
+
+        public Task UpdatePlayerBanStatusAsync(long steamId64, bool isCommunityBanned, string economyBan, int numberOfVacBans, long banDate, long lastVacCheck)
+        {
+            var sql = $@"
+                INSERT INTO players (steam_id64, is_community_banned, economy_ban, number_of_vac_bans, ban_date, last_vac_check) 
+                VALUES (@steamId, @isCommunityBanned, @economyBan, @numberOfVacBans, @banDate, @lastVacCheck)
+                ON CONFLICT(steam_id64) DO UPDATE SET 
+                    is_community_banned = excluded.is_community_banned,
+                    economy_ban = excluded.economy_ban,
+                    number_of_vac_bans = excluded.number_of_vac_bans,
+                    ban_date = excluded.ban_date,
+                    last_vac_check = excluded.last_vac_check;";
+
+            return ExecuteNonQueryAsync(sql,
+                new SqliteParameter("@steamId", steamId64.ToString()),
+                new SqliteParameter("@isCommunityBanned", isCommunityBanned ? 1 : 0),
+                new SqliteParameter("@economyBan", economyBan),
+                new SqliteParameter("@numberOfVacBans", numberOfVacBans),
+                new SqliteParameter("@banDate", banDate),
+                new SqliteParameter("@lastVacCheck", lastVacCheck));
+        }
     }
 }

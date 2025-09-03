@@ -31,7 +31,11 @@ namespace GSRP.Services
 
         public void ShowMessageDialog(string title, string message)
         {
-            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
+            var dialog = new MessageDialog(title, message)
+            {
+                Owner = Application.Current.MainWindow
+            };
+            dialog.ShowDialog();
         }
 
         public (bool Confirmed, Color? Color) ShowColorPicker(string title, Color? currentColor = null)

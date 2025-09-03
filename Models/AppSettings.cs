@@ -71,6 +71,13 @@ namespace GSRP.Models
         [JsonPropertyName("videos")]
         public string? VideosPath { get; set; } = "";
 
+        // API and automation settings
+        [JsonPropertyName("api_key")]
+        public string? ApiKey { get; set; }
+
+        [JsonPropertyName("enable_periodic_vac_check")]
+        public bool EnablePeriodicVacCheck { get; set; } = true;
+
         // Appearance settings
         [JsonPropertyName("icon_corner")]
         public IconCorner IconPlacement { get; set; } = IconCorner.BottomRight;

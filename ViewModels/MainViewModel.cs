@@ -30,15 +30,17 @@ namespace GSRP.ViewModels
         private readonly ISettingsService _settingsService;
         private readonly IDialogService _dialogService;
         private readonly IIconService _iconService;
+        private readonly IApiKeyService _apiKeyService;
         private readonly CancellationTokenSource _cts = new();
+        private int _isProcessingClipboard = 0;
+        private readonly ObservableCollection<Player> _allPlayers = new();
+        private CancellationTokenSource? _filterCts;
 
-        public ObservableCollection<Player> Players { get; }
         public ObservableCollection<Player> FilteredPlayers { get; }
         public ICollectionView FilteredConsoleOutput { get; }
         public ObservableCollection<string> ServerList { get; }
         public IReadOnlyList<IconInfo> AvailableIconInfos { get; private set; }
         public ObservableCollection<Player> DbSearchResults { get; }
-        
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(PlayerCount))]
@@ -83,32 +85,31 @@ namespace GSRP.ViewModels
         [ObservableProperty]
         private string _statusMessage = "Player Database & Reporting";
 
-        
-
         public int PlayerCount => FilteredPlayers.Count;
         public string PlayersTabHeader => $"Players ({PlayerCount})";
 
         public ICommand UpdatePlayerAliasAsyncCommand { get; }
         public ICommand SetPlayerGameColorAsyncCommand { get; }
         public ICommand SetPlayerSteamColorAsyncCommand { get; }
+        public ICommand SetPlayerAliasColorAsyncCommand { get; }
         public ICommand SetPlayerIconAsyncCommand { get; }
         public ICommand OpenInBrowserCommand { get; }
         public ICommand CopyPlayerIdCommand { get; }
         public ICommand CopyPlayerNameCommand { get; }
         public ICommand CopyPlayerAliasCommand { get; }
-        
+        public IAsyncRelayCommand UpdateSinglePlayerVacStatusCommand { get; }
         public ICommand CopyPlayerToReportCommand { get; }
         public ICommand CopyReportForServerCommand { get; }
         public IAsyncRelayCommand SearchDatabaseCommand { get; }
-
         public ICommand ClearSearchTextCommand { get; }
         public ICommand ClearDbSearchTextCommand { get; }
+        public ICommand TestCommand { get; } // For diagnostics
 
         public ISettingsService SettingsService => _settingsService;
         public AppSettings CurrentSettings => _settingsService.CurrentSettings;
 
         public MainViewModel(IPlayerRepository playerRepository, IClipboardService clipboardService, IPlayerListParser playerListParser, 
-                             IUdpConsoleService udpConsoleService, ISettingsService settingsService, IDialogService dialogService, IIconService iconService)
+                             IUdpConsoleService udpConsoleService, ISettingsService settingsService, IDialogService dialogService, IIconService iconService, IApiKeyService apiKeyService)
         {
             _playerRepository = playerRepository;
             _clipboardService = clipboardService;
@@ -117,18 +118,20 @@ namespace GSRP.ViewModels
             _settingsService = settingsService;
             _dialogService = dialogService;
             _iconService = iconService;
+            _apiKeyService = apiKeyService;
             
             _iconService.ScanForIcons();
             AvailableIconInfos = _iconService.AvailableIconNames
                 .Select(name => new IconInfo(name, _iconService.ResolveIconPath(name)))
                 .ToList();
 
-            Players = new ObservableCollection<Player>();
             FilteredPlayers = new ObservableCollection<Player>();
             DbSearchResults = new ObservableCollection<Player>();
             ServerList = new ObservableCollection<string>();
             FilteredConsoleOutput = CollectionViewSource.GetDefaultView(_udpConsoleService.ConsoleOutput);
             FilteredConsoleOutput.Filter = FilterConsoleMessages;
+
+            UpdateSinglePlayerVacStatusCommand = new AsyncRelayCommand<Player?>(UpdateSinglePlayerVacStatusAsync, CanUpdateSinglePlayerVacStatus);
 
             _playerRepository.PlayersUpdated += OnPlayersUpdated;
             _clipboardService.ClipboardChanged += OnClipboardChanged;
@@ -141,6 +144,7 @@ namespace GSRP.ViewModels
             UpdatePlayerAliasAsyncCommand = new AsyncRelayCommand<Player?>(UpdatePlayerAliasAsync);
             SetPlayerGameColorAsyncCommand = new AsyncRelayCommand<Player?>(p => SetPlayerColorAsync(p, ColorTarget.GameName));
             SetPlayerSteamColorAsyncCommand = new AsyncRelayCommand<Player?>(p => SetPlayerColorAsync(p, ColorTarget.SteamName));
+            SetPlayerAliasColorAsyncCommand = new AsyncRelayCommand<Player?>(SetPlayerAliasColorAsync);
             SetPlayerIconAsyncCommand = new AsyncRelayCommand<Tuple<object, object>?>(SetPlayerIconAsync);
             OpenInBrowserCommand = new RelayCommand<Player?>(OpenInBrowser);
 
@@ -153,6 +157,7 @@ namespace GSRP.ViewModels
             SearchDatabaseCommand = new AsyncRelayCommand(SearchDatabaseAsync, () => !string.IsNullOrWhiteSpace(DbSearchTerm));
             ClearSearchTextCommand = new RelayCommand(() => SearchText = string.Empty);
             ClearDbSearchTextCommand = new RelayCommand(() => DbSearchTerm = string.Empty);
+            TestCommand = new RelayCommand(() => _dialogService.ShowMessageDialog("Test", "Command was executed!"));
         }
 
         partial void OnShowUserCommandsOnlyChanged(bool value)
@@ -163,7 +168,6 @@ namespace GSRP.ViewModels
         private bool FilterConsoleMessages(object item)
         {
             if (!ShowUserCommandsOnly) return true;
-
             if (item is ConsoleMessage message)
             {
                 return message.Type == ConsoleMessageType.UserInput;
@@ -171,9 +175,21 @@ namespace GSRP.ViewModels
             return true;
         }
 
-        partial void OnSearchTextChanged(string value)
+        async partial void OnSearchTextChanged(string value)
         {
-            FilterPlayers();
+            _filterCts?.Cancel();
+            _filterCts = new CancellationTokenSource();
+            var token = _filterCts.Token;
+
+            try
+            {
+                await Task.Delay(300, token); // Debounce
+                FilterPlayers(token);
+            }
+            catch (OperationCanceledException)
+            { 
+                // ignored
+            }
         }
 
         [RelayCommand]
@@ -185,7 +201,6 @@ namespace GSRP.ViewModels
         private void OpenInBrowser(Player? player)
         {
             if (player == null || string.IsNullOrEmpty(player.SteamId64)) return;
-
             try
             {
                 var url = $"https://steamcommunity.com/profiles/{player.SteamId64}";
@@ -210,7 +225,6 @@ namespace GSRP.ViewModels
         private async Task SetPlayerColorAsync(Player? player, ColorTarget target)
         {
             if (player == null) return;
-
             var (title, currentColor) = target == ColorTarget.GameName
                 ? ($"Choose color for {player.Name}", player.PlayerColor)
                 : ($"Choose color for {player.PersonaName}", player.PersonaNameColor);
@@ -220,26 +234,37 @@ namespace GSRP.ViewModels
 
             if (target == ColorTarget.GameName)
             {
-                if (newColor.HasValue)
-                    await _playerRepository.SetPlayerColorAsync(player, newColor.Value);
-                else
-                    await _playerRepository.RemovePlayerColorAsync(player);
+                if (newColor.HasValue) await _playerRepository.SetPlayerColorAsync(player, newColor.Value);
+                else await _playerRepository.RemovePlayerColorAsync(player);
             }
-            else // SteamName
+            else
             {
-                if (newColor.HasValue)
-                    await _playerRepository.SetPlayerPersonaNameColorAsync(player, newColor.Value);
-                else
-                    await _playerRepository.RemovePlayerPersonaNameColorAsync(player);
+                if (newColor.HasValue) await _playerRepository.SetPlayerPersonaNameColorAsync(player, newColor.Value);
+                else await _playerRepository.RemovePlayerPersonaNameColorAsync(player);
+            }
+        }
+
+        private async Task SetPlayerAliasColorAsync(Player? player)
+        {
+            if (player == null || !player.HasAlias) return;
+
+            var (confirmed, newColor) = _dialogService.ShowColorPicker($"Choose color for alias '{player.Alias}'", player.AliasColor);
+            if (!confirmed) return;
+
+            if (newColor.HasValue)
+            {
+                await _playerRepository.SetPlayerAliasColorAsync(player, newColor.Value);
+            }
+            else
+            {
+                await _playerRepository.RemovePlayerAliasColorAsync(player);
             }
         }
 
         private async Task SetPlayerIconAsync(Tuple<object, object>? parameters)
         {
             if (parameters?.Item1 is not Player player || parameters?.Item2 is not IconInfo iconInfo) return;
-
             var iconToSet = iconInfo.Name.Equals("None", StringComparison.OrdinalIgnoreCase) ? string.Empty : iconInfo.Name;
-
             await _playerRepository.SetPlayerIconAsync(player, iconToSet);
         }
 
@@ -267,14 +292,12 @@ namespace GSRP.ViewModels
         {
             if (parameter is not Tuple<object, object> tuple) return;
             if (tuple.Item1 is not Player player || tuple.Item2 is not string serverName) return;
-
             var template = _settingsService.CurrentSettings.ReportTemplate ?? string.Empty;
             var reportText = template
                 .Replace("${ServerName}", serverName ?? "N/A")
                 .Replace("${PlayerName}", player.Name ?? "")
                 .Replace("${SteamId}", player.SteamId2 ?? "")
-                .Replace("${Details}", ""); // No details from context menu
-
+                .Replace("${Details}", "");
             CopyToClipboard(reportText, "Report");
         }
 
@@ -285,20 +308,10 @@ namespace GSRP.ViewModels
             {
                 steamId64Term = _playerListParser.SteamId2To64(DbSearchTerm);
             }
-            // If the input is already a SteamID64, the LIKE search in the DB will catch it.
-
             var results = await _playerRepository.SearchPlayersAsync(DbSearchTerm, steamId64Term, DbSearchExactMatch);
-
             DbSearchResults.Clear();
-            foreach (var player in results)
-            {
-                DbSearchResults.Add(player);
-            }
-
-            if (results.Count == 0)
-            {
-                SystemSounds.Beep.Play();
-            }
+            foreach (var player in results) DbSearchResults.Add(player);
+            if (results.Count == 0) SystemSounds.Beep.Play();
         }
 
         [RelayCommand(IncludeCancelCommand = true)]
@@ -308,64 +321,70 @@ namespace GSRP.ViewModels
         }
 
         [RelayCommand]
-        private void ShowSettingsDialog()
-        {
-            _dialogService.ShowSettingsDialog();
-        }
+        private void ShowSettingsDialog() => _dialogService.ShowSettingsDialog();
 
         [RelayCommand]
-        private void SendConsole()
-        {
-            SendConsoleMessage();
-        }
+        private void SendConsole() => SendConsoleMessage();
 
         [RelayCommand]
-        private void ToggleConsoleConnection()
-        {
-            ToggleConsoleConnectionInternal();
-        }
+        private void ToggleConsoleConnection() => ToggleConsoleConnectionInternal();
 
         private void OnPlayersUpdated(object? sender, List<Player> players)
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                Players.Clear();
-                foreach (var player in players) Players.Add(player);
-                FilterPlayers();
+                _allPlayers.Clear();
+                foreach (var player in players) _allPlayers.Add(player);
+                FilterPlayers(_cts.Token); // Initial filter
             });
         }
 
         private async void OnClipboardChanged(object? sender, string clipboardText)
         {
-            if (IsMonitoring && _playerListParser.IsValidPlayerListFormat(clipboardText))
+            if (Interlocked.Exchange(ref _isProcessingClipboard, 1) == 1) return;
+            try
             {
+                if (!IsMonitoring || !_playerListParser.IsValidPlayerListFormat(clipboardText)) return;
                 StatusMessage = "Processing...";
-                try
-                {
-                    await _playerRepository.ProcessClipboardDataAsync(clipboardText,
-                        new Progress<string>(msg => StatusMessage = msg));
-                }
-                finally
-                {
-                    StatusMessage = "Player Database & Reporting";
-                }
+                await _playerRepository.ProcessClipboardDataAsync(clipboardText, new Progress<string>(msg => StatusMessage = msg));
+            }
+            finally
+            {
+                StatusMessage = "Player Database & Reporting";
+                Interlocked.Exchange(ref _isProcessingClipboard, 0);
             }
         }
 
-        private void FilterPlayers()
+        private async void FilterPlayers(CancellationToken token)
         {
-            FilteredPlayers.Clear();
-            var source = string.IsNullOrWhiteSpace(SearchText) ? Players : Players.Where(p =>
-                (p.Name?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (p.PersonaName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (p.Alias?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (p.SteamId2?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (p.SteamId64?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false));
+            try
+            {
+                var filtered = await Task.Run(() =>
+                {
+                    if (string.IsNullOrWhiteSpace(SearchText))
+                        return _allPlayers.ToList();
 
-            foreach (var player in source) FilteredPlayers.Add(player);
+                    return _allPlayers.Where(p =>
+                        (p.Name?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (p.PersonaName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (p.Alias?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (p.SteamId2?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (p.SteamId64?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false))
+                        .ToList();
+                }, token);
 
-            OnPropertyChanged(nameof(PlayerCount));
-            OnPropertyChanged(nameof(PlayersTabHeader));
+                if (token.IsCancellationRequested) return;
+
+                FilteredPlayers.Clear();
+                foreach (var player in filtered) FilteredPlayers.Add(player);
+
+                OnPropertyChanged(nameof(PlayerCount));
+                OnPropertyChanged(nameof(PlayersTabHeader));
+            }
+            catch (OperationCanceledException)
+            {
+                // Task was cancelled, which is normal.
+            }
         }
 
         private void LoadServers()
@@ -374,50 +393,32 @@ namespace GSRP.ViewModels
             var servers = _settingsService.CurrentSettings.Servers;
             if (servers != null)
             {
-                foreach (var server in servers)
-                {
-                    if (!string.IsNullOrEmpty(server))
-                    {
-                        ServerList.Add(server);
-                    }
-                }
+                foreach (var server in servers) if (!string.IsNullOrEmpty(server)) ServerList.Add(server);
             }
             SelectedServer = ServerList.FirstOrDefault();
         }
 
         private void OnSettingsChanged(object? sender, AppSettings newSettings)
         {
-            // Reload settings that affect the MainViewModel
             LoadServers();
-
-            // Re-apply UDP settings if the console is running
             if (IsConsoleConnected)
             {
                 _udpConsoleService.StopListening();
                 _udpConsoleService.StartListening(newSettings.UdpListenPort);
             }
-
-            // Notify the UI that the entire settings object has changed, so any bindings update
             OnPropertyChanged(nameof(CurrentSettings));
         }
 
         private void ToggleConsoleConnectionInternal()
         {
-            if (IsConsoleConnected)
-            {
-                _udpConsoleService.StartListening(_settingsService.CurrentSettings.UdpListenPort);
-            }
-            else
-            {
-                _udpConsoleService.StopListening();
-            }
+            if (IsConsoleConnected) _udpConsoleService.StartListening(_settingsService.CurrentSettings.UdpListenPort);
+            else _udpConsoleService.StopListening();
         }
 
         private void SendConsoleMessage()
         {
             var sendAddress = _settingsService.CurrentSettings.UdpSendAddress;
             if (string.IsNullOrEmpty(sendAddress)) return;
-
             _ = _udpConsoleService.SendMessage(ConsoleInputText, sendAddress, _settingsService.CurrentSettings.UdpSendPort);
             ConsoleInputText = string.Empty;
         }
@@ -425,9 +426,9 @@ namespace GSRP.ViewModels
         private void RefreshPlayers()
         {
             var currentPlayers = _playerRepository.GetCurrentPlayers();
-            Players.Clear();
-            foreach (var player in currentPlayers) Players.Add(player);
-            FilterPlayers();
+            _allPlayers.Clear();
+            foreach (var player in currentPlayers) _allPlayers.Add(player);
+            FilterPlayers(_cts.Token);
         }
 
         private void StartMonitoring()
@@ -445,25 +446,64 @@ namespace GSRP.ViewModels
         private void CopyToClipboard(string? text, string type)
         {
             if (string.IsNullOrEmpty(text)) return;
-            try
-            {
-                ClipboardUtils.SetClipboardText(text);
-            }
-            catch (Exception ex)
-            {
-                _dialogService.ShowMessageDialog("Error", $"Failed to copy {type}: {ex.Message}");
-            }
+            try { Clipboard.SetText(text); }
+            catch (Exception ex) { _dialogService.ShowMessageDialog("Error", $"Failed to copy {type}: {ex.Message}"); }
         }
 
         private void CopyPlayerId(Player? player) => CopyToClipboard(player?.SteamId64, "SteamID64");
         private void CopyPlayerName(Player? player) => CopyToClipboard(player?.Name, "Name");
         private void CopyPlayerAlias(Player? player) => CopyToClipboard(player?.Alias, "Alias");
         
+        private async Task UpdateSinglePlayerVacStatusAsync(Player? player)
+        {
+            if (player == null) return;
 
+            // Check if an update was performed recently.
+            long currentTime = DateTimeOffset.Now.ToUnixTimeSeconds();
+            long fiveMinutesInSeconds = 5 * 60;
+            if (player.LastVacCheck > 0 && (currentTime - player.LastVacCheck) < fiveMinutesInSeconds)
+            {
+                _dialogService.ShowMessageDialog("Info", "Update not required.");
+                return;
+            }
+
+            StatusMessage = $"Updating VAC status for {player.DisplayName}...";
+            try
+            {
+                await _playerRepository.EnrichSinglePlayerVacStatusAsync(player, _cts.Token);
+                StatusMessage = $"VAC status updated for {player.DisplayName}.";
+                await Task.Delay(4000);
+            }
+            catch (OperationCanceledException)
+            {
+                StatusMessage = $"VAC status update cancelled for {player.DisplayName}.";
+                await Task.Delay(4000);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error updating VAC status for {player.DisplayName}: {ex.Message}";
+                _dialogService.ShowMessageDialog("Error", StatusMessage);
+            }
+            finally
+            {
+                StatusMessage = "Player Database & Reporting";
+                UpdateSinglePlayerVacStatusCommand.NotifyCanExecuteChanged();
+            }
+        }
+
+        private bool CanUpdateSinglePlayerVacStatus(Player? player)
+        {
+            // The button should be enabled if we have a player and an API key.
+            // The decision to show a message will be handled inside the command execution.
+            return player != null && !string.IsNullOrEmpty(_apiKeyService.GetApiKey());
+        }
+        
         public void Dispose()
         {
             _cts.Cancel();
             _cts.Dispose();
+            _filterCts?.Cancel();
+            _filterCts?.Dispose();
             _settingsService.SettingsChanged -= OnSettingsChanged;
             _playerRepository.PlayersUpdated -= OnPlayersUpdated;
             _clipboardService.ClipboardChanged -= OnClipboardChanged;

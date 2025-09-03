@@ -27,6 +27,7 @@ namespace GSRP
                     services.AddSingleton<IClipboardService, ClipboardService>();
                     services.AddSingleton<IUdpConsoleService, UdpConsoleService>();
                     services.AddSingleton<IDialogService, DialogService>();
+                    services.AddSingleton<IDatabaseMigrationService, DatabaseMigrationService>();
                     services.AddSingleton<IApiKeyService>(x => ApiKeyServiceFactory.Create(x.GetRequiredService<IPathProvider>()));
                     services.AddSingleton<IHttpClientService, HttpClientService>();
                     services.AddSingleton<ISingleInstanceService, SingleInstanceService>(); // Register the new service

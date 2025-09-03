@@ -18,6 +18,7 @@ namespace GSRP.Services
         private readonly IIconService _iconService;
         private readonly IPlayerListParser _playerListParser;
         private readonly IPathProvider _pathProvider;
+        private readonly ISettingsService _settingsService;
         private readonly Dictionary<string, Player> _currentPlayers;
         private readonly object _lock = new();
         private readonly IHttpClientService _httpClientService;
@@ -26,11 +27,12 @@ namespace GSRP.Services
 
         public event EventHandler<List<Player>>? PlayersUpdated;
 
-        public PlayerRepository(IDatabaseService database, IHttpClientService httpClientService, IApiKeyService apiKeyService, IDialogService dialogService, IIconService iconService, IPlayerListParser playerListParser, IPathProvider pathProvider)
+        public PlayerRepository(IDatabaseService database, IHttpClientService httpClientService, IApiKeyService apiKeyService, IDialogService dialogService, IIconService iconService, IPlayerListParser playerListParser, IPathProvider pathProvider, ISettingsService settingsService)
         {
             _database = database ?? throw new ArgumentNullException(nameof(database));
             _httpClientService = httpClientService ?? throw new ArgumentNullException(nameof(httpClientService));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             _steamApi = new SteamApiService(_httpClientService, apiKeyService);
             _iconService = iconService ?? throw new ArgumentNullException(nameof(iconService));
             _playerListParser = playerListParser ?? throw new ArgumentNullException(nameof(playerListParser));
@@ -54,6 +56,7 @@ namespace GSRP.Services
                     player.Alias = data.Alias;
                     player.PlayerColor = data.PlayerColor;
                     player.PersonaNameColor = data.PersonaNameColor;
+                    player.AliasColor = data.AliasColor;
                     player.AvatarHash = data.AvatarHash;
                     player.TimeCreated = data.TimeCreated;
                     player.PersonaName = data.PersonaName;
@@ -62,8 +65,16 @@ namespace GSRP.Services
                     player.AvatarPath = GetAvatarPath(data.AvatarHash);
                     player.IsAvatarCached = !string.IsNullOrEmpty(player.AvatarPath);
                     player.ProfileStatus = data.ProfileStatus;
+                    player.IsCommunityBanned = data.IsCommunityBanned;
+                    player.NumberOfVacBans = data.NumberOfVacBans;
+                    player.LastVacCheck = data.LastVacCheck;
+                    player.EconomyBan = data.EconomyBan;
+                    player.BanDate = data.BanDate;
+                    player.LastUpdated = data.LastUpdated; // New line
                 }
             }
+
+            NotifyPlayersUpdated();
 
             progress?.Report("Updating player list...");
             lock (_lock)
@@ -81,7 +92,7 @@ namespace GSRP.Services
             NotifyPlayersUpdated();
 
             progress?.Report("Enriching data...");
-            await EnrichPlayersAsync(parsedPlayers, _cts.Token);
+            await EnrichPlayersAsync(parsedPlayers, false, false, _cts.Token);
         }
 
         public async Task ForceEnrichCurrentPlayersAsync(CancellationToken token)
@@ -98,30 +109,95 @@ namespace GSRP.Services
             }
         }
 
-        private async Task EnrichPlayersAsync(List<Player> players, CancellationToken token)
+        public async Task EnrichSinglePlayerVacStatusAsync(Player player, CancellationToken token)
         {
-            var playersToUpdate = new List<Player>();
+            if (player == null) return;
 
-            foreach (var player in players)
+            // Use the existing EnrichPlayersAsync with forceBans = true for this single player
+            await EnrichPlayersAsync(new List<Player> { player }, false, true, token);
+        }
+
+        public async Task EnrichPlayersAsync(IEnumerable<Player> players, bool forceSummary, bool forceBans, CancellationToken token)
+        {
+            var playerList = players.ToList();
+            if (!playerList.Any()) return;
+
+            var playersForSummary = new List<Player>();
+            var playersForBans = new List<Player>();
+
+            try
             {
-                if (long.TryParse(player.SteamId64, out var steamId64))
+                // Decide who needs updates
+                foreach (var player in playerList)
                 {
-                    var lastUpdated = await _database.GetLastUpdatedAsync(steamId64);
-                    var minutesSinceUpdate = (DateTimeOffset.Now.ToUnixTimeSeconds() - lastUpdated) / 60;
-
-                    // We should also re-check players if we don't have a persona name for them yet (e.g. private profiles).
-                    bool needsUpdateForStatusCheck = string.IsNullOrEmpty(player.PersonaName) || player.ProfileStatus == ProfileStatus.Private;
-
-                    if (lastUpdated == 0 || minutesSinceUpdate > 20 || needsUpdateForStatusCheck)
+                    if (forceSummary || (DateTimeOffset.Now.ToUnixTimeSeconds() - player.LastUpdated) > 1200) // 20 mins
                     {
-                        playersToUpdate.Add(player);
+                        playersForSummary.Add(player);
+                    }
+                    if (forceBans || player.LastVacCheck == 0 || (_settingsService.CurrentSettings.EnablePeriodicVacCheck && (DateTimeOffset.Now.ToUnixTimeSeconds() - player.LastVacCheck) > 86400))
+                    {
+                        playersForBans.Add(player);
                     }
                 }
-            }
 
-            if (playersToUpdate.Any())
+                // Set status flags before starting API calls
+                foreach (var p in playersForSummary)
+                {
+                    // Only show the main "Updating" spinner if we don't have an avatar to display.
+                    // Otherwise, the refresh happens silently in the background.
+                    if (!p.IsAvatarCached)
+                    {
+                        p.IsUpdating = true;
+                    }
+                }
+                foreach (var p in playersForBans)
+                {
+                    // Only show the specific ban checking text if we aren't already showing the main spinner.
+                    if (!p.IsUpdating)
+                    {
+                        p.IsCheckingBans = true;
+                    }
+                }
+
+                // Fetch data from API
+                var summaryTask = _steamApi.EnrichPlayersAsync(playersForSummary, token);
+                var bansTask = _steamApi.GetPlayerBansAsync(playersForBans, token);
+                await Task.WhenAll(summaryTask, bansTask);
+
+                var summaryResult = await summaryTask;
+                var bansResult = await bansTask;
+
+                // Process results and update DB
+                var dbTasks = new List<Task>();
+                foreach (var player in playerList)
+                {
+                    if (summaryResult?.Data.TryGetValue(player.SteamId64, out var summary) == true)
+                    {
+                        ApplySummaryDataToPlayer(player, summary);
+                        dbTasks.Add(UpdatePlayerSummaryInDb(player));
+                    }
+
+                    if (bansResult?.FirstOrDefault(b => b.SteamId == player.SteamId64) is { } banData)
+                    {
+                        ApplyBanDataToPlayer(player, banData);
+                        dbTasks.Add(UpdatePlayerBansInDb(player));
+                    }
+                }
+
+                await Task.WhenAll(dbTasks);
+            }
+            catch (Exception ex)
             {
-                await DoEnrichmentAsync(playersToUpdate, token);
+                // Log error
+                System.Diagnostics.Debug.WriteLine($"[Enrichment] Error: {ex.Message}");
+            }
+            finally
+            {
+                foreach (var p in playerList)
+                {
+                    p.IsUpdating = false;
+                    p.IsCheckingBans = false;
+                }
             }
         }
 
@@ -205,6 +281,32 @@ namespace GSRP.Services
             }
 
             await Task.WhenAll(allUpdateTasks);
+        }
+
+        
+
+        private Task UpdatePlayerSummaryInDb(Player player)
+        {
+            if (!long.TryParse(player.SteamId64, out var steamId64)) return Task.CompletedTask;
+            var tasks = new List<Task>
+            {
+                _database.SetPersonaNameAsync(steamId64, player.PersonaName),
+                _database.SetTimeCreatedAsync(steamId64, player.TimeCreated),
+                _database.SetAvatarHashAsync(steamId64, player.AvatarHash),
+                _database.SetProfileStatusAsync(steamId64, player.ProfileStatus),
+                _database.SetLastUpdatedAsync(steamId64, DateTimeOffset.Now.ToUnixTimeSeconds())
+            };
+            if (!string.IsNullOrEmpty(player.AvatarHash) && !player.IsAvatarCached)
+            {
+                tasks.Add(DownloadAvatarAsync(player, player.AvatarHash, _cts.Token));
+            }
+            return Task.WhenAll(tasks);
+        }
+
+        private Task UpdatePlayerBansInDb(Player player)
+        {
+            if (!long.TryParse(player.SteamId64, out var steamId64)) return Task.CompletedTask;
+            return _database.UpdatePlayerBanStatusAsync(steamId64, player.IsCommunityBanned, player.EconomyBan, player.NumberOfVacBans, player.BanDate, player.LastVacCheck);
         }
 
         private void NotifyPlayersUpdated()
@@ -409,6 +511,58 @@ namespace GSRP.Services
             }
         }
 
+        public async Task SetPlayerAliasColorAsync(Player player, Color color)
+        {
+            if (!long.TryParse(player.SteamId64, out var steamId64)) return;
+
+            var oldColor = player.AliasColor;
+            player.AliasColor = color; // Optimistic update
+
+            try
+            {
+                await _database.SetAliasColorAsync(steamId64, color);
+                lock (_lock)
+                {
+                    if (_currentPlayers.TryGetValue(player.SteamId64, out var existing))
+                    {
+                        existing.AliasColor = color;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                player.AliasColor = oldColor; // Rollback on failure
+                _dialogService.ShowMessageDialog("Database Error", "Failed to update alias color.");
+                System.Diagnostics.Debug.WriteLine($"[Repository] Failed to set alias color: {ex.Message}");
+            }
+        }
+
+        public async Task RemovePlayerAliasColorAsync(Player player)
+        {
+            if (!long.TryParse(player.SteamId64, out var steamId64)) return;
+
+            var oldColor = player.AliasColor;
+            player.AliasColor = null; // Optimistic update
+
+            try
+            {
+                await _database.RemoveAliasColorAsync(steamId64);
+                lock (_lock)
+                {
+                    if (_currentPlayers.TryGetValue(player.SteamId64, out var existing))
+                    {
+                        existing.AliasColor = null;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                player.AliasColor = oldColor; // Rollback on failure
+                _dialogService.ShowMessageDialog("Database Error", "Failed to remove alias color.");
+                System.Diagnostics.Debug.WriteLine($"[Repository] Failed to remove alias color: {ex.Message}");
+            }
+        }
+
         public async Task SetPlayerIconAsync(Player player, string iconName)
         {
             if (!long.TryParse(player.SteamId64, out var steamId64)) return;
@@ -442,6 +596,28 @@ namespace GSRP.Services
             }
         }
 
+        private void ApplySummaryDataToPlayer(Player player, PlayerData summary)
+        {
+            player.ProfileStatus = summary.IsPrivate ? ProfileStatus.Private : ProfileStatus.Public;
+            player.PersonaName = summary.PersonaName;
+            player.TimeCreated = summary.TimeCreated;
+            player.AvatarHash = summary.AvatarHash;
+            player.AvatarPath = GetAvatarPath(player.AvatarHash);
+            player.IsAvatarCached = !string.IsNullOrEmpty(player.AvatarPath);
+        }
+
+        private void ApplyBanDataToPlayer(Player player, PlayerBanData banData)
+        {
+            player.IsCommunityBanned = banData.CommunityBanned;
+            player.EconomyBan = banData.EconomyBan;
+            player.NumberOfVacBans = banData.NumberOfVACBans;
+            long banDate = (banData.DaysSinceLastBan > 0)
+                ? DateTimeOffset.Now.ToUnixTimeSeconds() - (banData.DaysSinceLastBan * 86400L) // 86400 seconds in a day
+                : 0;
+            player.BanDate = banDate;
+            player.LastVacCheck = DateTimeOffset.Now.ToUnixTimeSeconds();
+        }
+
         public void Dispose()
         {
             _cts.Cancel();
@@ -473,13 +649,21 @@ namespace GSRP.Services
                     Alias = result.Data.Alias,
                     PlayerColor = result.Data.PlayerColor,
                     PersonaNameColor = result.Data.PersonaNameColor,
+                    AliasColor = result.Data.AliasColor,
                     AvatarHash = result.Data.AvatarHash,
                     TimeCreated = result.Data.TimeCreated,
                     PersonaName = result.Data.PersonaName,
                     IconName = result.Data.IconName,
                     IconPath = _iconService.ResolveIconPath(result.Data.IconName) ?? string.Empty,
                     AvatarPath = GetAvatarPath(result.Data.AvatarHash),
-                    IsAvatarCached = !string.IsNullOrEmpty(GetAvatarPath(result.Data.AvatarHash))
+                    IsAvatarCached = !string.IsNullOrEmpty(GetAvatarPath(result.Data.AvatarHash)),
+                    IsCommunityBanned = result.Data.IsCommunityBanned,
+                    NumberOfVacBans = result.Data.NumberOfVacBans,
+                    LastVacCheck = result.Data.LastVacCheck,
+                    EconomyBan = result.Data.EconomyBan,
+                    BanDate = result.Data.BanDate,
+                    ProfileStatus = result.Data.ProfileStatus,
+                    LastUpdated = result.Data.LastUpdated // New line
                 };
 
                 // Name is not stored in the DB, so we use PersonaName as a sensible default for display.

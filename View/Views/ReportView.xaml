@@ -23,36 +23,54 @@
 
             <DockPanel Grid.Row="1" Margin="0,0,0,16">
                 <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0" Text="Server:" Style="{StaticResource SubtleText}" VerticalAlignment="Center"/>
-                    <ComboBox Grid.Column="1" 
+                    <ComboBox x:Name="ServerComboBox"
                               ItemsSource="{Binding ServerList}"
                               SelectedItem="{Binding SelectedServer}"
-                              Margin="12,0,0,0"/>
+                              />
+                    <TextBlock Text="Server" Foreground="#6b7280" IsHitTestVisible="False" VerticalAlignment="Center" Margin="12,0,0,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedItem, ElementName=ServerComboBox}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                 </Grid>
 
                 <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0" Text="Nickname:" Style="{StaticResource SubtleText}" VerticalAlignment="Center"/>
-                    <TextBox Grid.Column="1" Text="{Binding ReportNickname, UpdateSourceTrigger=PropertyChanged}" Margin="12,0,0,0"/>
+                    <TextBox x:Name="ReportNicknameBox" Text="{Binding ReportNickname, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="Nickname" Foreground="#6b7280" IsHitTestVisible="False" VerticalAlignment="Center" Margin="12,0,0,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Text, ElementName=ReportNicknameBox}" Value="">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                 </Grid>
 
                 <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0" Text="SteamID:" Style="{StaticResource SubtleText}" VerticalAlignment="Center"/>
-                    <TextBox Grid.Column="1" Text="{Binding ReportSteamId, UpdateSourceTrigger=PropertyChanged}" Margin="12,0,0,0"/>
+                    <TextBox x:Name="ReportSteamIdBox" Text="{Binding ReportSteamId, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="SteamID" Foreground="#6b7280" IsHitTestVisible="False" VerticalAlignment="Center" Margin="12,0,0,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Text, ElementName=ReportSteamIdBox}" Value="">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                 </Grid>
 
                 <TextBlock DockPanel.Dock="Top" Text="What Happened:" Style="{StaticResource SubtleText}" Margin="0,8,0,8"/>
