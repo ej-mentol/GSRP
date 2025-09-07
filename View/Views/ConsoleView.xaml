@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:conv="clr-namespace:GSRP.Converters"
+             xmlns:ui="http://schemas.modernwpf.com/2019"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
@@ -52,7 +53,48 @@
                          KeyDown="ConsoleInput_KeyDown"
                          Grid.Column="0" 
                          Text="{Binding ConsoleInputText, UpdateSourceTrigger=PropertyChanged}" 
-                         Margin="0,0,8,0"/>
+                         Margin="0,0,8,0">
+                    <TextBox.ContextMenu>
+                        <ContextMenu Style="{StaticResource ThemedContextMenu}">
+                            <MenuItem Command="ApplicationCommands.Cut" Header="Cut" Style="{StaticResource ThemedMenuItem}">
+                                <MenuItem.Icon>
+                                    <Border Background="#ef4444" CornerRadius="3" Width="16" Height="16">
+                                        <TextBlock Text="✂️" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Command="ApplicationCommands.Copy" Header="Copy" Style="{StaticResource ThemedMenuItem}">
+                                <MenuItem.Icon>
+                                    <Border Background="#3b82f6" CornerRadius="3" Width="16" Height="16">
+                                        <TextBlock Text="📋" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Command="ApplicationCommands.Paste" Header="Paste" Style="{StaticResource ThemedMenuItem}">
+                                <MenuItem.Icon>
+                                    <Border Background="#10b981" CornerRadius="3" Width="16" Height="16">
+                                        <TextBlock Text="📄" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator/>
+                            <MenuItem Command="ApplicationCommands.SelectAll" Header="Select All" Style="{StaticResource ThemedMenuItem}">
+                                <MenuItem.Icon>
+                                    <Border Background="#60a5fa" CornerRadius="3" Width="16" Height="16">
+                                        <ui:FontIcon Glyph="&#xE8B3;" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Command="ApplicationCommands.Delete" Header="Delete" Style="{StaticResource ThemedMenuItem}">
+                                <MenuItem.Icon>
+                                    <Border Background="#ef4444" CornerRadius="3" Width="16" Height="16">
+                                        <ui:FontIcon Glyph="&#xE74D;" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                        </ContextMenu>
+                    </TextBox.ContextMenu>
+                </TextBox>
 
                 <Button Grid.Column="1" 
                         Content="Send" 

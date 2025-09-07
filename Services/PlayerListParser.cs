@@ -81,8 +81,8 @@ namespace GSRP.Services
                         var player = new Player
                         {
                             Name = match.Groups[1].Value.Trim(),
-                            SteamId2 = steamId2,
-                            SteamId64 = steamId64
+                            SteamId64 = steamId64,
+                            ParsedSteamId2 = steamId2
                         };
                         players.Add(player);
                     }

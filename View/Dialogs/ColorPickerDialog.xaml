@@ -7,101 +7,6 @@
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
 
     <Window.Resources>
-        <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Background" Value="#3b82f6"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="8"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Opacity" Value="0.9"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Opacity" Value="0.8"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
-            <Setter Property="Background" Value="#6b7280"/>
-        </Style>
-
-        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
-            <Setter Property="Background" Value="#ef4444"/>
-        </Style>
-
-        <Style x:Key="ColorButton" TargetType="Button">
-            <Setter Property="Width" Value="28"/>
-            <Setter Property="Height" Value="28"/>
-            <Setter Property="Margin" Value="2"/>
-            <Setter Property="BorderThickness" Value="2"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4">
-                            <Border.Effect>
-                                <DropShadowEffect Color="Black" Opacity="0.2" BlurRadius="2" ShadowDepth="1"/>
-                            </Border.Effect>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="BorderBrush" Value="#a6a8ab"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="ModernTextBox" TargetType="TextBox">
-            <Setter Property="Background" Value="#262629"/>
-            <Setter Property="Foreground" Value="#f2f2f2"/>
-            <Setter Property="BorderBrush" Value="#2d2e33"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="8,6"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TextBox">
-                        <Border Background="{TemplateBinding Background}" 
-                                BorderBrush="{TemplateBinding BorderBrush}" 
-                                BorderThickness="{TemplateBinding BorderThickness}" 
-                                CornerRadius="6" 
-                                Padding="{TemplateBinding Padding}">
-                            <ScrollViewer x:Name="PART_ContentHost" 
-                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsFocused" Value="True">
-                                <Setter Property="BorderBrush" Value="#3b82f6"/>
-                                <Setter Property="Background" Value="#2a2a2e"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <Style x:Key="ModernSlider" TargetType="Slider">
             <Setter Property="Height" Value="20"/>
             <Setter Property="Template">
@@ -125,6 +30,38 @@
                                 </Track.Thumb>
                             </Track>
                         </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ModernTextBox Style needed by the dialog -->
+        <Style x:Key="ModernTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#2d2e33"/>
+            <Setter Property="Foreground" Value="#f2f2f2"/>
+            <Setter Property="BorderBrush" Value="#4b5563"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="#6b7280"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="#3b82f6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -202,30 +139,30 @@
                         </Grid.ColumnDefinitions>
 
                         <!-- Red -->
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="R" Foreground="#ef4444" FontWeight="Bold" FontSize="15" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="R" Foreground="#ef4444" FontWeight="Bold" FontSize="15" TextAlignment="Center" VerticalAlignment="Top"/>
                         <Slider x:Name="RedSlider" Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="255" 
                                 Style="{StaticResource ModernSlider}" Margin="8,0" ValueChanged="ColorSlider_ValueChanged"/>
                         <TextBox x:Name="RedTextBox" Grid.Row="0" Grid.Column="2" Style="{StaticResource ModernTextBox}" 
-                                 TextChanged="ColorTextBox_TextChanged" Height="28" FontSize="14"/>
+                                 TextChanged="ColorTextBox_TextChanged"/>
 
                         <!-- Green -->
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="G" Foreground="#22c55e" FontWeight="Bold" FontSize="15" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="G" Foreground="#22c55e" FontWeight="Bold" FontSize="15" TextAlignment="Center" VerticalAlignment="Center"/>
                         <Slider x:Name="GreenSlider" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="255" 
                                 Style="{StaticResource ModernSlider}" Margin="8,10,8,0" ValueChanged="ColorSlider_ValueChanged"/>
                         <TextBox x:Name="GreenTextBox" Grid.Row="1" Grid.Column="2" Style="{StaticResource ModernTextBox}" 
-                                 TextChanged="ColorTextBox_TextChanged" Height="28" Margin="0,10,0,0" FontSize="14"/>
+                                 TextChanged="ColorTextBox_TextChanged" Margin="0,10,0,0"/>
 
                         <!-- Blue -->
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="B" Foreground="#3b82f6" FontWeight="Bold" FontSize="15" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="B" Foreground="#3b82f6" FontWeight="Bold" FontSize="15" TextAlignment="Center" VerticalAlignment="Center"/>
                         <Slider x:Name="BlueSlider" Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="255" 
                                 Style="{StaticResource ModernSlider}" Margin="8,10,8,0" ValueChanged="ColorSlider_ValueChanged"/>
                         <TextBox x:Name="BlueTextBox" Grid.Row="2" Grid.Column="2" Style="{StaticResource ModernTextBox}" 
-                                 TextChanged="ColorTextBox_TextChanged" Height="28" Margin="0,10,0,0" FontSize="14"/>
+                                 TextChanged="ColorTextBox_TextChanged" Margin="0,10,0,0"/>
 
                         <!-- Hex -->
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="#" Foreground="#a6a8ab" FontWeight="Bold" FontSize="15" VerticalAlignment="Center" Margin="0,16,0,0"/>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="#" Foreground="#a6a8ab" FontWeight="Bold" FontSize="15" Margin="0,16,0,0" HorizontalAlignment="Center" TextAlignment="Center"/>
                         <TextBox x:Name="HexTextBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" 
-                                 Style="{StaticResource ModernTextBox}" Margin="8,16,0,0" Height="28" FontSize="14"
+                                 Style="{StaticResource ModernTextBox}" Margin="8,16,0,0" 
                                  TextChanged="HexTextBox_TextChanged" HorizontalContentAlignment="Left"/>
                     </Grid>
                 </StackPanel>

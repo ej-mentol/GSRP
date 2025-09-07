@@ -30,6 +30,7 @@ namespace GSRP
                     services.AddSingleton<IDatabaseMigrationService, DatabaseMigrationService>();
                     services.AddSingleton<IApiKeyService>(x => ApiKeyServiceFactory.Create(x.GetRequiredService<IPathProvider>()));
                     services.AddSingleton<IHttpClientService, HttpClientService>();
+                    services.AddSingleton<IScreenshotService, ScreenshotService>();
                     services.AddSingleton<ISingleInstanceService, SingleInstanceService>(); // Register the new service
                 })
                 .Build();

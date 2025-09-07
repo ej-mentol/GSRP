@@ -22,6 +22,8 @@ namespace GSRP.Services
         string GetAvatarPath(string avatarHash);
         Task ForceEnrichCurrentPlayersAsync(CancellationToken token);
         Task EnrichSinglePlayerVacStatusAsync(Player player, CancellationToken token);
+        Task EnrichSinglePlayerAsync(Player player, CancellationToken token);
+        Task EnrichPlayersAsync(IEnumerable<Player> players, bool forceSummary, bool forceBans, CancellationToken token);
         Task<List<Player>> SearchPlayersAsync(string searchTerm, string? steamId64Term, bool exactMatch);
     }
 }

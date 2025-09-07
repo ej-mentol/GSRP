@@ -5,6 +5,7 @@
         xmlns:conv="clr-namespace:GSRP.Converters"
         xmlns:view="clr-namespace:GSRP.View.Views"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        xmlns:ui="http://schemas.modernwpf.com/2019"
         Title="GSRP"
         Width="1000" Height="800"
         WindowStartupLocation="CenterScreen"
@@ -52,11 +53,10 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <!-- Logo and Title -->
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Left Panel (Logo and Title) -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
                             <Border Width="36" Height="36" CornerRadius="8" Margin="0,0,12,0">
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -83,11 +83,52 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <!-- Search Box -->
-                        <Grid Grid.Column="1" HorizontalAlignment="Center" Width="300">
+                        <!-- Center Panel (Search Box) -->
+                        <Grid Grid.Column="1" Width="300">
                             <TextBox x:Name="MainSearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
                                      Style="{StaticResource {x:Type TextBox}}"
-                                     shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
+                                     shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                                <TextBox.ContextMenu>
+                                    <ContextMenu Style="{StaticResource ThemedContextMenu}">
+                                        <MenuItem Command="ApplicationCommands.Cut" Header="Cut" Style="{StaticResource ThemedMenuItem}">
+                                            <MenuItem.Icon>
+                                                <Border Background="#ef4444" CornerRadius="3" Width="16" Height="16">
+                                                    <TextBlock Text="✂️" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Command="ApplicationCommands.Copy" Header="Copy" Style="{StaticResource ThemedMenuItem}">
+                                            <MenuItem.Icon>
+                                                <Border Background="#3b82f6" CornerRadius="3" Width="16" Height="16">
+                                                    <TextBlock Text="📋" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Command="ApplicationCommands.Paste" Header="Paste" Style="{StaticResource ThemedMenuItem}">
+                                            <MenuItem.Icon>
+                                                <Border Background="#10b981" CornerRadius="3" Width="16" Height="16">
+                                                    <TextBlock Text="📄" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator/>
+                                        <MenuItem Command="ApplicationCommands.SelectAll" Header="Select All" Style="{StaticResource ThemedMenuItem}">
+                                            <MenuItem.Icon>
+                                                <Border Background="#60a5fa" CornerRadius="3" Width="16" Height="16">
+                                                    <ui:FontIcon Glyph="&#xE8B3;" FontSize="10"  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Command="ApplicationCommands.Delete" Header="Delete" Style="{StaticResource ThemedMenuItem}">
+                                            <MenuItem.Icon>
+                                                <Border Background="#ef4444" CornerRadius="3" Width="16" Height="16">
+                                                    <ui:FontIcon Glyph="&#xE74D;" FontSize="10"  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </TextBox.ContextMenu>
+                            </TextBox>
                             <TextBlock Text="Search players..." 
                                        Foreground="#6b7280" 
                                        IsHitTestVisible="False" 
@@ -134,40 +175,43 @@
                             </Button>
                         </Grid>
 
-                        <!-- Action Buttons -->
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-                            <Button Width="32" Height="32" Margin="0,0,8,0" 
-                                    Command="{Binding RefreshDataCommand}"
-                                    Style="{StaticResource HeaderButton}"
-                                    ToolTip="Refresh player data"
-                                    Visibility="Collapsed">
-                                <TextBlock Text="🔄" Foreground="#a6a8ab" FontSize="14"/>
-                            </Button>
-                            <Button Width="32" Height="32" 
-                                    Command="{Binding ShowSettingsDialogCommand}"
-                                    Style="{StaticResource HeaderButton}"
-                                    ToolTip="Settings">
-                                <TextBlock Text="⚙" Foreground="#a6a8ab" FontSize="14"/>
-                            </Button>
-                        </StackPanel>
+                        <!-- Right Panel (Action and Window Buttons) -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                            <!-- Action Buttons -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Width="32" Height="32" Margin="0,0,8,0" 
+                                        Command="{Binding RefreshDataCommand}"
+                                        Style="{StaticResource HeaderButton}"
+                                        ToolTip="Refresh player data"
+                                        Visibility="Collapsed">
+                                    <TextBlock Text="🔄" Foreground="#a6a8ab" FontSize="14"/>
+                                </Button>
+                                <Button Width="32" Height="32" 
+                                        Command="{Binding ShowSettingsDialogCommand}"
+                                        Style="{StaticResource HeaderButton}"
+                                        ToolTip="Settings">
+                                    <TextBlock Text="⚙" Foreground="#a6a8ab" FontSize="14"/>
+                                </Button>
+                            </StackPanel>
 
-                        <!-- Window Controls -->
-                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Name="MinimizeButton" 
-                                    Style="{StaticResource WindowControlButton}" 
-                                    Click="MinimizeButton_Click">
-                                <TextBlock Text="−" Foreground="#a6a8ab" FontSize="14" FontWeight="Bold"/>
-                            </Button>
-                            <Button Name="MaximizeButton" 
-                                    Style="{StaticResource WindowControlButton}" 
-                                    Click="MaximizeButton_Click">
-                                <TextBlock Text="□" Foreground="#a6a8ab" FontSize="12"/>
-                            </Button>
-                            <Button Name="CloseButton" 
-                                    Style="{StaticResource CloseButton}" 
-                                    Click="CloseButton_Click">
-                                <TextBlock Text="✕" Foreground="#a6a8ab" FontSize="10"/>
-                            </Button>
+                            <!-- Window Controls -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                                <Button Name="MinimizeButton" 
+                                        Style="{StaticResource WindowControlButton}" 
+                                        Click="MinimizeButton_Click">
+                                    <TextBlock Text="−" Foreground="#a6a8ab" FontSize="14" FontWeight="Bold"/>
+                                </Button>
+                                <Button Name="MaximizeButton" 
+                                        Style="{StaticResource WindowControlButton}" 
+                                        Click="MaximizeButton_Click">
+                                    <TextBlock Text="□" Foreground="#a6a8ab" FontSize="12"/>
+                                </Button>
+                                <Button Name="CloseButton" 
+                                        Style="{StaticResource CloseButton}" 
+                                        Click="CloseButton_Click">
+                                    <TextBlock Text="✕" Foreground="#a6a8ab" FontSize="10"/>
+                                </Button>
+                            </StackPanel>
                         </StackPanel>
                     </Grid>
                 </Border>

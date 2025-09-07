@@ -18,9 +18,11 @@
         <conv:IsGreaterThanZeroConverter x:Key="IsGreaterThanZeroConverter"/>
         <conv:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter"/>
         <conv:BanTooltipConverter x:Key="BanTooltipConverter"/>
+        <conv:IsNullOrEmptyToVisibilityConverter x:Key="IsNullOrEmptyToVisibilityConverter"/>
     </UserControl.Resources>
 
     <Border x:Name="MainBorder"
+            MinHeight="92"
             BorderBrush="#2d2e33"
             BorderThickness="0,0,0,1"
             Padding="24,18"
@@ -63,6 +65,17 @@
                     <MenuItem.Icon>
                         <Border Background="#f59e0b" CornerRadius="3" Width="16" Height="16">
                             <TextBlock Text="🔢" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </MenuItem.Icon>
+                </MenuItem>
+
+                <MenuItem Header="Copy SteamID"
+                          Style="{StaticResource ThemedMenuItem}"
+                          Command="{Binding PlacementTarget.Tag.CopyPlayerSteamId2Command, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                    <MenuItem.Icon>
+                        <Border Background="#84cc16" CornerRadius="3" Width="16" Height="16">
+                            <TextBlock Text="🆔" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                     </MenuItem.Icon>
                 </MenuItem>
@@ -128,7 +141,7 @@
                           Command="{Binding PlacementTarget.Tag.SetPlayerSteamColorAsyncCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
                     <MenuItem.Icon>
-                        <Border Background="#ec4899" CornerRadius="3" Width="16" Height="16">
+                        <Border Background="#06b6d4" CornerRadius="3" Width="16" Height="16">
                             <TextBlock Text="🎨" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                     </MenuItem.Icon>
@@ -139,8 +152,21 @@
                           Command="{Binding PlacementTarget.Tag.SetPlayerAliasColorAsyncCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
                     <MenuItem.Icon>
-                        <Border Background="#ec4899" CornerRadius="3" Width="16" Height="16">
+                        <Border Background="#d946ef" CornerRadius="3" Width="16" Height="16">
                             <TextBlock Text="🎨" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </MenuItem.Icon>
+                </MenuItem>
+
+                <Separator/>
+
+                <MenuItem Header="Copy as Image"
+                          Style="{StaticResource ThemedMenuItem}"
+                          Command="{Binding PlacementTarget.Tag.CreatePlayerCardImageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                    <MenuItem.Icon>
+                        <Border Background="#6366f1" CornerRadius="3" Width="16" Height="16">
+                            <TextBlock Text="📷" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                     </MenuItem.Icon>
                 </MenuItem>
@@ -162,9 +188,24 @@
                     Margin="0,0,16,0"
                     Tag="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl}, Path=DataContext}">
                 <Grid>
-                    <ui:ProgressRing IsActive="{Binding IsUpdating}"
+                    <ui:ProgressRing IsActive="True"
                                      Width="32" Height="32"
-                                     Visibility="{Binding IsUpdating, Converter={StaticResource BoolToVis}}"/>
+                                     Foreground="White">
+                        <ui:ProgressRing.Style>
+                            <Style TargetType="ui:ProgressRing">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsBusy}" Value="True"/>
+                                            <Condition Binding="{Binding IsAvatarCached}" Value="False"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:ProgressRing.Style>
+                    </ui:ProgressRing>
 
                     <Image Width="52" Height="52" Stretch="UniformToFill"
                            Source="{Binding AvatarPath, Converter={StaticResource StringToImage}}">
@@ -172,14 +213,9 @@
                             <Style TargetType="Image">
                                 <Setter Property="Visibility" Value="Collapsed" />
                                 <Style.Triggers>
-                                    <MultiDataTrigger>
-                                        <MultiDataTrigger.Conditions>
-                                            <Condition Binding="{Binding IsAvatarCached}" Value="True"/>
-                                            <Condition Binding="{Binding IsUpdating}" Value="False"/>
-                                            <Condition Binding="{Binding AvatarDownloadFailed}" Value="False"/>
-                                        </MultiDataTrigger.Conditions>
+                                    <DataTrigger Binding="{Binding IsAvatarCached}" Value="True">
                                         <Setter Property="Visibility" Value="Visible"/>
-                                    </MultiDataTrigger>
+                                    </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Image.Style>
@@ -197,7 +233,7 @@
                                     <DataTrigger Binding="{Binding IsAvatarCached}" Value="True">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                     </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsUpdating}" Value="True">
+                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding AvatarDownloadFailed}" Value="True">
@@ -344,7 +380,7 @@
 
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
                     <TextBlock Text="{Binding SteamId2}" Foreground="#a6a8ab" FontFamily="Consolas" FontSize="14" VerticalAlignment="Center"/>
-                    <Grid Margin="8,0,0,0">
+                    <Grid Margin="8,0,0,0" Height="18" VerticalAlignment="Center">
                         <!-- Ban Icons Panel -->
                         <StackPanel Orientation="Horizontal">
                             <StackPanel.Style>
@@ -389,32 +425,14 @@
                     </Grid>
                 </StackPanel>
                 
-                <Grid MinHeight="20">
-                    <TextBlock Text="Updating..."
-                               Foreground="#a6a8ab"
-                               FontStyle="Italic"
-                               FontSize="14"
-                               FontFamily="Segoe UI"
-                               Visibility="{Binding IsUpdating, Converter={StaticResource BoolToVis}}"/>
-
+                <Grid Height="20">
                     <TextBlock Text="{Binding DisplayPersonaName}"
                                Foreground="{Binding PersonaNameColorBrush, TargetNullValue=#629BF8}"
                                FontSize="15"
-                               FontFamily="Segoe UI">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Visibility" Value="Visible"/> <!-- Default to visible -->
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsUpdating}" Value="True">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                               FontFamily="Segoe UI"
+                               Visibility="{Binding HasPersonaName, Converter={StaticResource BoolToVis}}"/>
 
-                    <TextBlock Text="Unknown"
-                               Foreground="#a6a8ab"
+                    <TextBlock Foreground="#a6a8ab"
                                FontStyle="Italic"
                                FontSize="14"
                                FontFamily="Segoe UI">
@@ -424,10 +442,19 @@
                                 <Style.Triggers>
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
-                                            <Condition Binding="{Binding IsUpdating}" Value="False"/>
                                             <Condition Binding="{Binding HasPersonaName}" Value="False"/>
+                                            <Condition Binding="{Binding IsBusy}" Value="True"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Visibility" Value="Visible"/>
+                                        <Setter Property="Text" Value="Updating..."/>
+                                    </MultiDataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding HasPersonaName}" Value="False"/>
+                                            <Condition Binding="{Binding IsBusy}" Value="False"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Setter Property="Text" Value="Unknown"/>
                                     </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -465,7 +492,7 @@
                     Click="MenuButton_Click">
                 <Button.ContextMenu>
                     <ContextMenu Style="{StaticResource ThemedContextMenu}" x:Name="MenuButtonContextMenu">
-                        <MenuItem Header="Update VAC Status"
+                        <MenuItem Header="Update Profile"
                                   Style="{StaticResource ThemedMenuItem}"
                                   Click="UpdateVacStatus_Click">
                             <MenuItem.Icon>

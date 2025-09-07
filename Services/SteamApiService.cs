@@ -127,29 +127,42 @@ namespace GSRP.Services
                 return null;
             }
 
-            try
+            var allBans = new List<PlayerBanData>();
+            const int batchSize = 100;
+
+            for (int i = 0; i < players.Count; i += batchSize)
             {
-                var ids = string.Join(",", players.Select(p => p.SteamId64));
-                var requestUrl = $"https://api.steampowered.com/ISteamUser/GetPlayerBans/v1/?key={apiKey}&steamids={ids}";
+                var batch = players.Skip(i).Take(batchSize).ToList();
+                if (!batch.Any()) continue;
 
-                var response = await _httpClient.GetAsync(requestUrl, cancellationToken);
-
-                if (!response.IsSuccessStatusCode)
+                try
                 {
-                    // Don't bother the user with errors here, just log it.
-                    System.Diagnostics.Debug.WriteLine($"Steam API (GetPlayerBans) returned an error: {response.ReasonPhrase}");
-                    return null;
-                }
+                    var ids = string.Join(",", batch.Select(p => p.SteamId64));
+                    var requestUrl = $"https://api.steampowered.com/ISteamUser/GetPlayerBans/v1/?key={apiKey}&steamids={ids}";
 
-                var json = await response.Content.ReadAsStringAsync(cancellationToken);
-                var result = JsonSerializer.Deserialize<PlayerBansRoot>(json);
-                return result?.Players;
+                    var response = await _httpClient.GetAsync(requestUrl, cancellationToken);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Steam API (GetPlayerBans) returned an error: {response.ReasonPhrase}");
+                        continue; // Continue to next batch
+                    }
+
+                    var json = await response.Content.ReadAsStringAsync(cancellationToken);
+                    var result = JsonSerializer.Deserialize<PlayerBansRoot>(json);
+                    if (result?.Players != null)
+                    {
+                        allBans.AddRange(result.Players);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Steam API (GetPlayerBans) batch error: {ex.Message}");
+                    // Continue to next batch
+                }
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                System.Diagnostics.Debug.WriteLine($"Steam API (GetPlayerBans) error: {ex.Message}");
-                return null;
-            }
+
+            return allBans;
         }
     }
 }

@@ -5,6 +5,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:controls="clr-namespace:GSRP.Views.Controls"
              xmlns:conv="clr-namespace:GSRP.Converters"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:behaviors="clr-namespace:GSRP.Behaviors"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
@@ -14,7 +16,11 @@
         <ScrollViewer Background="#1e1f23" 
                       VerticalScrollBarVisibility="Auto" 
                       HorizontalScrollBarVisibility="Disabled"
+                      Margin="0,0,4,0"
                       Style="{StaticResource {x:Type ScrollViewer}}">
+            <b:Interaction.Behaviors>
+                <behaviors:SmoothScrollBehavior Speed="1.7" Duration="200" />
+            </b:Interaction.Behaviors>
             <ItemsControl ItemsSource="{Binding FilteredPlayers}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>

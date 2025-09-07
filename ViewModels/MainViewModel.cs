@@ -31,6 +31,7 @@ namespace GSRP.ViewModels
         private readonly IDialogService _dialogService;
         private readonly IIconService _iconService;
         private readonly IApiKeyService _apiKeyService;
+        private readonly IScreenshotService _screenshotService;
         private readonly CancellationTokenSource _cts = new();
         private int _isProcessingClipboard = 0;
         private readonly ObservableCollection<Player> _allPlayers = new();
@@ -95,11 +96,13 @@ namespace GSRP.ViewModels
         public ICommand SetPlayerIconAsyncCommand { get; }
         public ICommand OpenInBrowserCommand { get; }
         public ICommand CopyPlayerIdCommand { get; }
+        public ICommand CopyPlayerSteamId2Command { get; }
         public ICommand CopyPlayerNameCommand { get; }
         public ICommand CopyPlayerAliasCommand { get; }
         public IAsyncRelayCommand UpdateSinglePlayerVacStatusCommand { get; }
         public ICommand CopyPlayerToReportCommand { get; }
         public ICommand CopyReportForServerCommand { get; }
+        public IAsyncRelayCommand CreatePlayerCardImageCommand { get; }
         public IAsyncRelayCommand SearchDatabaseCommand { get; }
         public ICommand ClearSearchTextCommand { get; }
         public ICommand ClearDbSearchTextCommand { get; }
@@ -109,7 +112,7 @@ namespace GSRP.ViewModels
         public AppSettings CurrentSettings => _settingsService.CurrentSettings;
 
         public MainViewModel(IPlayerRepository playerRepository, IClipboardService clipboardService, IPlayerListParser playerListParser, 
-                             IUdpConsoleService udpConsoleService, ISettingsService settingsService, IDialogService dialogService, IIconService iconService, IApiKeyService apiKeyService)
+                             IUdpConsoleService udpConsoleService, ISettingsService settingsService, IDialogService dialogService, IIconService iconService, IApiKeyService apiKeyService, IScreenshotService screenshotService)
         {
             _playerRepository = playerRepository;
             _clipboardService = clipboardService;
@@ -119,6 +122,7 @@ namespace GSRP.ViewModels
             _dialogService = dialogService;
             _iconService = iconService;
             _apiKeyService = apiKeyService;
+            _screenshotService = screenshotService;
             
             _iconService.ScanForIcons();
             AvailableIconInfos = _iconService.AvailableIconNames
@@ -149,15 +153,39 @@ namespace GSRP.ViewModels
             OpenInBrowserCommand = new RelayCommand<Player?>(OpenInBrowser);
 
             CopyPlayerIdCommand = new RelayCommand<Player?>(CopyPlayerId);
+            CopyPlayerSteamId2Command = new RelayCommand<Player?>(CopyPlayerSteamId2);
             CopyPlayerNameCommand = new RelayCommand<Player?>(CopyPlayerName);
             CopyPlayerAliasCommand = new RelayCommand<Player?>(CopyPlayerAlias);
             
             CopyPlayerToReportCommand = new RelayCommand<Player?>(CopyPlayerToReport);
             CopyReportForServerCommand = new RelayCommand<object>(CopyReportForServer);
+            CreatePlayerCardImageCommand = new AsyncRelayCommand<Player?>(CreatePlayerCardImageAsync);
             SearchDatabaseCommand = new AsyncRelayCommand(SearchDatabaseAsync, () => !string.IsNullOrWhiteSpace(DbSearchTerm));
             ClearSearchTextCommand = new RelayCommand(() => SearchText = string.Empty);
             ClearDbSearchTextCommand = new RelayCommand(() => DbSearchTerm = string.Empty);
             TestCommand = new RelayCommand(() => _dialogService.ShowMessageDialog("Test", "Command was executed!"));
+        }
+
+        private async Task CreatePlayerCardImageAsync(Player? player)
+        {
+            if (player == null) return;
+
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            while (player.IsBusy && stopwatch.Elapsed < TimeSpan.FromSeconds(5))
+            {
+                await Task.Delay(100);
+            }
+
+            if (player.IsBusy)
+            {
+                _dialogService.ShowMessageDialog("Error", "Player is still updating. Please try again in a moment.");
+                return;
+            }
+
+            await _screenshotService.CreateAndCopyToClipboardAsync(player);
+            StatusMessage = "Card image copied to clipboard.";
+            await Task.Delay(2000);
+            StatusMessage = "Player Database & Reporting";
         }
 
         partial void OnShowUserCommandsOnlyChanged(bool value)
@@ -451,6 +479,7 @@ namespace GSRP.ViewModels
         }
 
         private void CopyPlayerId(Player? player) => CopyToClipboard(player?.SteamId64, "SteamID64");
+        private void CopyPlayerSteamId2(Player? player) => CopyToClipboard(player?.ParsedSteamId2 ?? player?.SteamId2, "SteamID");
         private void CopyPlayerName(Player? player) => CopyToClipboard(player?.Name, "Name");
         private void CopyPlayerAlias(Player? player) => CopyToClipboard(player?.Alias, "Alias");
         
@@ -458,7 +487,6 @@ namespace GSRP.ViewModels
         {
             if (player == null) return;
 
-            // Check if an update was performed recently.
             long currentTime = DateTimeOffset.Now.ToUnixTimeSeconds();
             long fiveMinutesInSeconds = 5 * 60;
             if (player.LastVacCheck > 0 && (currentTime - player.LastVacCheck) < fiveMinutesInSeconds)
@@ -467,25 +495,27 @@ namespace GSRP.ViewModels
                 return;
             }
 
-            StatusMessage = $"Updating VAC status for {player.DisplayName}...";
+            player.IsCheckingBans = true;
+            StatusMessage = "Updating VAC Status...";
             try
             {
-                await _playerRepository.EnrichSinglePlayerVacStatusAsync(player, _cts.Token);
-                StatusMessage = $"VAC status updated for {player.DisplayName}.";
-                await Task.Delay(4000);
+                await _playerRepository.EnrichSinglePlayerAsync(player, _cts.Token);
+                StatusMessage = "VAC status updated.";
+                await Task.Delay(2000); // Shorter delay
             }
             catch (OperationCanceledException)
             {
-                StatusMessage = $"VAC status update cancelled for {player.DisplayName}.";
-                await Task.Delay(4000);
+                StatusMessage = "VAC status update cancelled.";
+                await Task.Delay(2000);
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error updating VAC status for {player.DisplayName}: {ex.Message}";
+                StatusMessage = $"Error updating VAC status: {ex.Message}";
                 _dialogService.ShowMessageDialog("Error", StatusMessage);
             }
             finally
             {
+                player.IsCheckingBans = false;
                 StatusMessage = "Player Database & Reporting";
                 UpdateSinglePlayerVacStatusCommand.NotifyCanExecuteChanged();
             }

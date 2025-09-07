@@ -1,6 +1,6 @@
 # GSRP - Player Database & Reporting
 
-This is your static "smart" player table (it is currently **Windows** only, the "Preview" release speaks for itself). GSRP is a specialized desktop application designed to act as a "smart TAB button". Its primary function is to quickly identify players from copied game console output (e.g., `status` command), providing immediate, relevant information without needing to access friends lists or remember complex IDs. It offers a clean, beautiful output for on-the-fly player identification.
+This is your "smart" player table (it is currently **Windows** only, the "Preview" release speaks for itself). GSRP is a specialized desktop application designed to act as a "smart TAB button". Its primary function is to quickly identify players from copied game console output (e.g., `status` command), providing immediate, relevant information without needing to access friends lists or remember complex IDs. It offers a clean, beautiful output for on-the-fly player identification.
 
 ## Important Notes
 
@@ -12,9 +12,12 @@ I recommend creating a separate alternate Steam account and using that account f
 
 ## Features
 
-*   **Quick Player Identification from Clipboard:** The core feature. Copy game console output (like a `status` command result), and GSRP will parse it to provide instant, enriched player details. This helps in identifying players "here and now," avoiding confusion with common names or the need to recall SteamIDs.
-*   **Steam API Integration:** Automatically enrich player profiles with data such as persona names, avatars, and profile privacy status from the Steam API.
+*   **Quick Player Identification from Clipboard:** The core feature. Copy game console output (like a `status` command result), and GSRP will parse it to provide instant, enriched player details.
+*   **Smart Steam API Integration:** Enriches profiles with data from Steam. Player data is cached for 20 minutes and avatars are cached permanently by hash to respect API rate limits and improve performance.
+*   **Manual Profile Refresh:** Manually update any player's VAC status and profile information (avatar, name) directly from their card's context menu.
+*   **Shareable Player Cards:** Generate a clean image of a player's card with their key information to easily share reports or findings.
 *   **Customizable Player Icons:** Assign custom icons to players for easy identification.
+*   **Color-Coded Nicknames:** Assign custom colors to player names, Steam names, and aliases for better visual organization.
 *   **Local Data Storage:** Utilizes a local SQLite database for persistent storage of player data and settings.
 *   **Offline Mode Support:** Designed to function with available local data even without an active internet connection or Steam API key.
 *   **One‑click Report:** Quickly generate a formatted report (server, player, nick, IDs, reason) suitable for sending to server administrators — intended for any player to use when reporting incidents on a server, not only for community managers or admins.
@@ -23,7 +26,7 @@ I recommend creating a separate alternate Steam account and using that account f
 
 ### Players Tab
 
-This tab shows players added during the current session. To add players, run the `status` command in-game and copy the console output. Right-click a player avatar to open the icon menu; right-click elsewhere on the card for the context menu.
+This tab shows players added during the current session. To add players, run the `status` command in-game and copy the console output. Right-click a player avatar to open the icon menu; right-click elsewhere on the card for the context menu. You can also right-click the '...' menu on a card to manually refresh that player's data.
 
 *   **Alias:** You can assign an Alias to a player (a custom label, e.g., player "ej mentol" → Alias "nanaga nub").
 
@@ -31,8 +34,7 @@ This tab shows players added during the current session. To add players, run the
 
 This tab helps generate a report for GS by filling a template with the selected values. For convenience, use "Copy to Report" from the player card context menu.
 
-*   **Note:** The "Copy as Report" function currently does not work.
-*   **Specialized Use:** This feature is designed to produce a one‑click formatted report (server, who, nick, ids, reason) that any player can use to quickly alert server administrators.
+*   **Specialized Use:** This feature is designed to produce a one-click formatted report (server, who, nick, ids, reason) that any player can use to quickly alert server administrators.
 
 ### Console Tab
 
@@ -44,7 +46,7 @@ This tab is designed for use with the MetahookSV ChatForwarder plugin. It provid
 
 This is a basic tool to find players in the database. It accepts:
 
-*   **Steam Usernames:** (Note: in-game names are not stored)
+*   **Steam Usernames:** Searches the database for players by their last known Steam Name (PersonaName). In-game names from the 'status' command are not stored.
 *   **SteamID64:** (Starts with `765...`)
 *   **SteamID2:** (e.g., `STEAM_X:Y:ZZZZZZ`)
 
@@ -56,8 +58,7 @@ Functionality matches the Players tab. You can change the displayed name color o
 
 To build and run GSRP, you will need:
 
-*   [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8) (for building from source).
-I am trying to create a single file with minimal dependencies. However, installation may be required for future releases: [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8). 
+*   [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8) (for building from source). For running the application, the [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8) may be required.
 *   **Steam Web API Key:** A valid Steam Web API Key is required for Steam API integration features. You can obtain one [here](https://steamcommunity.com/dev/apikey).
 
 ### Building from Source
