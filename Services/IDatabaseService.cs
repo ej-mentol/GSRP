@@ -25,7 +25,7 @@ namespace GSRP.Services
 
     public record PlayerSearchResult(string SteamId64, PlayerDbData Data);
 
-    public interface IDatabaseService
+    public interface IDatabaseService : IDisposable
     {
         Task<List<PlayerSearchResult>> SearchPlayersAsync(string searchTerm, string? steamId64Term, bool exactMatch);
         Task<Dictionary<string, PlayerDbData>> GetPlayersDataAsync(IEnumerable<string> steamIds);

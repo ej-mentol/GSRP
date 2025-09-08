@@ -9,7 +9,7 @@ namespace GSRP.Behaviors
     public class SmoothScrollBehavior : Behavior<ScrollViewer>
     {
         public double Speed { get; set; } = 0.5;
-        public int Duration { get; set; } = 300;
+        public int Duration { get; set; } = 150;
 
         protected override void OnAttached()
         {

@@ -50,9 +50,9 @@
 
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
                         <!-- Left Panel (Logo and Title) -->
@@ -72,9 +72,23 @@
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Foreground" Value="#a6a8ab"/>
+                                            <Setter Property="FontWeight" Value="Normal"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding StatusMessage}" Value="Processing...">
-                                                    <Setter Property="Foreground" Value="#e5e7eb"/>
+                                                    <Setter Property="Foreground" Value="#22c55e"/>
+                                                    <Setter Property="FontWeight" Value="Medium"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding StatusMessage}" Value="Parsing player list...">
+                                                    <Setter Property="Foreground" Value="#22c55e"/>
+                                                    <Setter Property="FontWeight" Value="Medium"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding StatusMessage}" Value="Updating player list...">
+                                                    <Setter Property="Foreground" Value="#22c55e"/>
+                                                    <Setter Property="FontWeight" Value="Medium"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding StatusMessage}" Value="Enriching data...">
+                                                    <Setter Property="Foreground" Value="#22c55e"/>
+                                                    <Setter Property="FontWeight" Value="Medium"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>

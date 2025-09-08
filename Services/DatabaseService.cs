@@ -1,26 +1,84 @@
 using GSRP.Models;
 using Microsoft.Data.Sqlite;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media;
 
 namespace GSRP.Services
 {
-    public class DatabaseService : IDatabaseService
+    public class DatabaseService : IDatabaseService, IDisposable
     {
         private readonly string _connectionString;
         private readonly IDatabaseMigrationService _migrationService;
+        private readonly ConcurrentQueue<Func<Task>> _operationQueue;
+        private readonly SemaphoreSlim _queueSemaphore;
+        private readonly CancellationTokenSource _cts;
+        private readonly Task _processingTask;
 
         public DatabaseService(IPathProvider pathProvider, IDatabaseMigrationService migrationService)
         {
             _migrationService = migrationService;
             var dbPath = Path.Combine(pathProvider.GetAppDataPath(), "players.db");
             _connectionString = $"Data Source={dbPath};";
+            
+            _operationQueue = new ConcurrentQueue<Func<Task>>();
+            _queueSemaphore = new SemaphoreSlim(0);
+            _cts = new CancellationTokenSource();
+            
             InitializeDatabase();
+            
+            _processingTask = Task.Run(ProcessQueueAsync);
+        }
+
+        private async Task ProcessQueueAsync()
+        {
+            while (!_cts.Token.IsCancellationRequested)
+            {
+                try
+                {
+                    await _queueSemaphore.WaitAsync(_cts.Token);
+                    
+                    if (_operationQueue.TryDequeue(out var operation))
+                    {
+                        await operation();
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[DatabaseService] Queue processing error: {ex.Message}");
+                }
+            }
+        }
+
+        private Task EnqueueOperationAsync(Func<Task> operation)
+        {
+            var tcs = new TaskCompletionSource<bool>();
+            
+            _operationQueue.Enqueue(async () =>
+            {
+                try
+                {
+                    await operation();
+                    tcs.SetResult(true);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            });
+            
+            _queueSemaphore.Release();
+            return tcs.Task;
         }
 
         private void InitializeDatabase()
@@ -46,7 +104,8 @@ namespace GSRP.Services
                     number_of_vac_bans INTEGER NOT NULL DEFAULT 0,
                     last_vac_check INTEGER NOT NULL DEFAULT 0,
                     economy_ban TEXT NOT NULL DEFAULT 'none',
-                    ban_date INTEGER NOT NULL DEFAULT 0
+                    ban_date INTEGER NOT NULL DEFAULT 0,
+                    alias_color INTEGER DEFAULT 0
                 );";
             using (var command = new SqliteCommand(createTableSql, connection))
             {
@@ -134,7 +193,6 @@ namespace GSRP.Services
                 parameters.Add(new SqliteParameter("@term", $"%{searchTerm}%"));
             }
 
-            // Always include steamid search, which is exact.
             if (!string.IsNullOrEmpty(steamId64Term))
             {
                 conditions.Add("steam_id64 = @steamId64");
@@ -142,7 +200,6 @@ namespace GSRP.Services
             }
             else
             {
-                // Also check if the general search term is a steamid
                 conditions.Add("steam_id64 LIKE @term");
             }
 
@@ -219,10 +276,10 @@ namespace GSRP.Services
                     {fieldName} = excluded.{fieldName},
                     last_updated = @lastUpdated;";
             
-            return ExecuteNonQueryAsync(sql, 
+            return EnqueueOperationAsync(() => ExecuteNonQueryAsync(sql, 
                 new SqliteParameter("@steamId", steamId64.ToString()),
                 new SqliteParameter("@value", value),
-                new SqliteParameter("@lastUpdated", DateTimeOffset.Now.ToUnixTimeSeconds()));
+                new SqliteParameter("@lastUpdated", DateTimeOffset.Now.ToUnixTimeSeconds())));
         }
 
         public Task SetIconNameAsync(long steamId64, string iconName) => UpsertPlayerFieldAsync(steamId64, "iconname", iconName);
@@ -268,13 +325,26 @@ namespace GSRP.Services
                     ban_date = excluded.ban_date,
                     last_vac_check = excluded.last_vac_check;";
 
-            return ExecuteNonQueryAsync(sql,
+            return EnqueueOperationAsync(() => ExecuteNonQueryAsync(sql,
                 new SqliteParameter("@steamId", steamId64.ToString()),
                 new SqliteParameter("@isCommunityBanned", isCommunityBanned ? 1 : 0),
                 new SqliteParameter("@economyBan", economyBan),
                 new SqliteParameter("@numberOfVacBans", numberOfVacBans),
                 new SqliteParameter("@banDate", banDate),
-                new SqliteParameter("@lastVacCheck", lastVacCheck));
+                new SqliteParameter("@lastVacCheck", lastVacCheck)));
+        }
+
+        public void Dispose()
+        {
+            _cts.Cancel();
+            try
+            {
+                _processingTask.Wait(1000);
+            }
+            catch { }
+            
+            _cts.Dispose();
+            _queueSemaphore.Dispose();
         }
     }
 }

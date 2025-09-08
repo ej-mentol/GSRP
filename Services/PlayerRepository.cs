@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Media;
 using GSRP.Models;
 using GSRP.Models.SteamApi;
+using System.Collections.Concurrent;
 
 namespace GSRP.Services
 {
@@ -23,8 +24,10 @@ namespace GSRP.Services
         private readonly object _lock = new();
         private readonly IHttpClientService _httpClientService;
         private readonly CancellationTokenSource _cts = new();
+        private CancellationTokenSource _clipboardCts = new();
         private static readonly SemaphoreSlim _avatarDownloadSemaphore = new SemaphoreSlim(4);
         private static readonly SemaphoreSlim _enrichmentSemaphore = new SemaphoreSlim(1, 1);
+        private readonly ConcurrentDictionary<string, string> _avatarPathCache = new();
 
         public event EventHandler<List<Player>>? PlayersUpdated;
 
@@ -43,6 +46,12 @@ namespace GSRP.Services
 
         public async Task ProcessClipboardDataAsync(string clipboardText, IProgress<string> progress)
         {
+            var oldCts = _clipboardCts;
+            _clipboardCts = new CancellationTokenSource();
+            oldCts.Cancel();
+            oldCts.Dispose();
+            var token = _clipboardCts.Token;
+
             progress?.Report("Parsing player list...");
             var parsedPlayers = _playerListParser.ParsePlayers(clipboardText);
             if (!parsedPlayers.Any()) return;
@@ -75,8 +84,6 @@ namespace GSRP.Services
                 }
             }
 
-            NotifyPlayersUpdated();
-
             progress?.Report("Updating player list...");
             lock (_lock)
             {
@@ -93,7 +100,7 @@ namespace GSRP.Services
             NotifyPlayersUpdated();
 
             progress?.Report("Enriching data...");
-            await EnrichPlayersAsync(parsedPlayers, false, false, _cts.Token);
+            await EnrichPlayersAsync(parsedPlayers, false, false, token);
         }
 
         public async Task ForceEnrichCurrentPlayersAsync(CancellationToken token)
@@ -114,14 +121,17 @@ namespace GSRP.Services
         {
             if (player == null) return;
 
-            await EnrichPlayersAsync(new List<Player> { player }, false, true, token);
+            await EnrichPlayersAsync(new List<Player> { player }, true, true, token);
         }
 
         public async Task EnrichSinglePlayerAsync(Player player, CancellationToken token)
         {
-            await _enrichmentSemaphore.WaitAsync(token);
+            bool semaphoreAcquired = false;
             try
             {
+                await _enrichmentSemaphore.WaitAsync(token);
+                semaphoreAcquired = true;
+
                 var summaryTask = _steamApi.EnrichPlayersAsync(new List<Player> { player }, token);
                 var bansTask = _steamApi.GetPlayerBansAsync(new List<Player> { player }, token);
                 await Task.WhenAll(summaryTask, bansTask);
@@ -129,20 +139,31 @@ namespace GSRP.Services
                 var summaryResult = await summaryTask;
                 var bansResult = await bansTask;
 
-                var dbTasks = new List<Task>();
                 if (summaryResult?.Data.TryGetValue(player.SteamId64, out var summary) == true)
                 {
                     ApplySummaryDataToPlayer(player, summary);
-                    dbTasks.Add(UpdatePlayerSummaryInDb(player));
+                    try { await UpdatePlayerSummaryInDb(player, token); }
+                    catch (Exception ex) 
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[EnrichSinglePlayer] Failed to save summary: {ex.Message}");
+                        _dialogService.ShowMessageDialog("Database Error", $"Failed to save summary update for {player.DisplayNameForUI}.");
+                    }
                 }
 
                 if (bansResult?.FirstOrDefault(b => b.SteamId == player.SteamId64) is { } banData)
                 {
                     ApplyBanDataToPlayer(player, banData);
-                    dbTasks.Add(UpdatePlayerBansInDb(player));
+                    try { await UpdatePlayerBansInDb(player); }
+                    catch (Exception ex) 
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[EnrichSinglePlayer] Failed to save bans: {ex.Message}");
+                        _dialogService.ShowMessageDialog("Database Error", $"Failed to save ban status for {player.DisplayNameForUI}.");
+                    }
                 }
-
-                await Task.WhenAll(dbTasks);
+            }
+            catch (OperationCanceledException)
+            {
+                System.Diagnostics.Debug.WriteLine($"[EnrichSinglePlayer] Operation was cancelled.");
             }
             catch (Exception ex)
             {
@@ -150,62 +171,39 @@ namespace GSRP.Services
             }
             finally
             {
-                _enrichmentSemaphore.Release();
+                if (semaphoreAcquired)
+                {
+                    _enrichmentSemaphore.Release();
+                }
             }
         }
 
         public async Task EnrichPlayersAsync(IEnumerable<Player> players, bool forceSummary, bool forceBans, CancellationToken token)
         {
-            await _enrichmentSemaphore.WaitAsync(token);
+            bool semaphoreAcquired = false;
             try
             {
+                await _enrichmentSemaphore.WaitAsync(token);
+                semaphoreAcquired = true;
+
                 var playerList = players.ToList();
                 if (!playerList.Any()) return;
 
-                var playersForSummary = new List<Player>();
-                var playersForBans = new List<Player>();
+                var (playersForSummary, playersForBans) = FilterPlayersForEnrichment(playerList, forceSummary, forceBans);
 
-                foreach (var player in playerList)
+                foreach (var p in playersForBans) p.IsCheckingBans = true;
+
+                var (summaryResult, bansResult) = await FetchEnrichmentData(playersForSummary, playersForBans, token);
+                var failedPlayers = await ProcessEnrichmentResults(playerList, summaryResult, bansResult, token);
+
+                if (failedPlayers.Any())
                 {
-                    if (forceSummary || (DateTimeOffset.Now.ToUnixTimeSeconds() - player.LastUpdated) > 1200) // 20 mins
-                    {
-                        playersForSummary.Add(player);
-                    }
-                    if (forceBans || player.LastVacCheck == 0 || (_settingsService.CurrentSettings.EnablePeriodicVacCheck && (DateTimeOffset.Now.ToUnixTimeSeconds() - player.LastVacCheck) > 86400))
-                    {
-                        playersForBans.Add(player);
-                    }
+                    ShowBatchErrorDialog(failedPlayers);
                 }
-
-                foreach (var p in playersForBans)
-                {
-                    p.IsCheckingBans = true;
-                }
-
-                var summaryTask = _steamApi.EnrichPlayersAsync(playersForSummary, token);
-                var bansTask = _steamApi.GetPlayerBansAsync(playersForBans, token);
-                await Task.WhenAll(summaryTask, bansTask);
-
-                var summaryResult = await summaryTask;
-                var bansResult = await bansTask;
-
-                var dbTasks = new List<Task>();
-                foreach (var player in playerList)
-                {
-                    if (summaryResult?.Data.TryGetValue(player.SteamId64, out var summary) == true)
-                    {
-                        ApplySummaryDataToPlayer(player, summary);
-                        dbTasks.Add(UpdatePlayerSummaryInDb(player));
-                    }
-
-                    if (bansResult?.FirstOrDefault(b => b.SteamId == player.SteamId64) is { } banData)
-                    {
-                        ApplyBanDataToPlayer(player, banData);
-                        dbTasks.Add(UpdatePlayerBansInDb(player));
-                    }
-                }
-
-                await Task.WhenAll(dbTasks);
+            }
+            catch (OperationCanceledException)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Enrichment] Operation was cancelled.");
             }
             catch (Exception ex)
             {
@@ -213,13 +211,86 @@ namespace GSRP.Services
             }
             finally
             {
-                foreach (var p in players.ToList())
+                if(semaphoreAcquired)
                 {
-                    p.IsUpdating = false;
-                    p.IsCheckingBans = false;
+                    foreach (var p in players.ToList())
+                    {
+                        p.IsUpdating = false;
+                        p.IsCheckingBans = false;
+                    }
+                    _enrichmentSemaphore.Release();
                 }
-                _enrichmentSemaphore.Release();
             }
+        }
+
+        private (List<Player> summary, List<Player> bans) FilterPlayersForEnrichment(List<Player> players, bool forceSummary, bool forceBans)
+        {
+            var playersForSummary = new List<Player>();
+            var playersForBans = new List<Player>();
+            var now = DateTimeOffset.Now.ToUnixTimeSeconds();
+
+            foreach (var player in players)
+            {
+                if (forceSummary || (now - player.LastUpdated) > 1200) // 20 mins
+                    playersForSummary.Add(player);
+
+                if (forceBans || player.LastVacCheck == 0 ||
+                    (_settingsService.CurrentSettings.EnablePeriodicVacCheck && (now - player.LastVacCheck) > 86400))
+                    playersForBans.Add(player);
+            }
+
+            return (playersForSummary, playersForBans);
+        }
+
+        private async Task<(EnrichmentResult, List<PlayerBanData>?)> FetchEnrichmentData(List<Player> playersForSummary, List<Player> playersForBans, CancellationToken token)
+        {
+            var summaryTask = _steamApi.EnrichPlayersAsync(playersForSummary, token);
+            var bansTask = _steamApi.GetPlayerBansAsync(playersForBans, token);
+            await Task.WhenAll(summaryTask, bansTask);
+            return (await summaryTask, await bansTask);
+        }
+
+        private async Task<List<Player>> ProcessEnrichmentResults(List<Player> playerList, EnrichmentResult summaryResult, List<PlayerBanData>? bansResult, CancellationToken token)
+        {
+            var failedPlayers = new List<Player>();
+            foreach (var player in playerList)
+            {
+                if (summaryResult?.Data.TryGetValue(player.SteamId64, out var summary) == true)
+                {
+                    ApplySummaryDataToPlayer(player, summary);
+                    try
+                    {
+                        await UpdatePlayerSummaryInDb(player, token);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Repository] Failed to save summary data for player {player.SteamId64}: {ex.Message}");
+                        if (!failedPlayers.Contains(player)) failedPlayers.Add(player);
+                    }
+                }
+
+                if (bansResult?.FirstOrDefault(b => b.SteamId == player.SteamId64) is { } banData)
+                {
+                    ApplyBanDataToPlayer(player, banData);
+                    try
+                    {
+                        await UpdatePlayerBansInDb(player);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Repository] Failed to save ban data for player {player.SteamId64}: {ex.Message}");
+                        if (!failedPlayers.Contains(player)) failedPlayers.Add(player);
+                    }
+                }
+            }
+            return failedPlayers;
+        }
+
+        private void ShowBatchErrorDialog(List<Player> failedPlayers)
+        {
+            var playerNames = string.Join(", ", failedPlayers.Take(3).Select(p => p.DisplayNameForUI));
+            var message = $"Failed to save updated data for {failedPlayers.Count} player(s) (e.g., {playerNames}). The application may re-check them later.";
+            _dialogService.ShowMessageDialog("Database Write Error", message);
         }
 
         private async Task DoEnrichmentAsync(List<Player> playersToEnrich, CancellationToken token)
@@ -265,55 +336,54 @@ namespace GSRP.Services
 
             if (anyBatchFailed) return;
 
-            var allUpdateTasks = new List<Task>();
-
             foreach (var player in playersToEnrich)
             {
                 if (!long.TryParse(player.SteamId64, out var steamId64)) continue;
 
                 if (totalSteamData.TryGetValue(player.SteamId64, out var data))
                 {
-                    player.ProfileStatus = data.IsPrivate ? ProfileStatus.Private : ProfileStatus.Public;
-                    player.PersonaName = data.PersonaName;
-                    allUpdateTasks.Add(_database.SetPersonaNameAsync(steamId64, data.PersonaName));
-                    player.TimeCreated = data.TimeCreated;
-                    allUpdateTasks.Add(_database.SetTimeCreatedAsync(steamId64, data.TimeCreated));
-                    player.AvatarHash = data.AvatarHash;
-                    allUpdateTasks.Add(_database.SetAvatarHashAsync(steamId64, data.AvatarHash));
-
-                    if (!string.IsNullOrEmpty(data.AvatarHash) && !player.IsAvatarCached)
-                    {
-                        allUpdateTasks.Add(DownloadAvatarAsync(player, data.AvatarHash, token));
-                    }
+                    ApplySummaryDataToPlayer(player, data);
                 }
                 else
                 {
                     player.ProfileStatus = ProfileStatus.NotFound;
                 }
 
-                allUpdateTasks.Add(_database.SetProfileStatusAsync(steamId64, player.ProfileStatus));
-                allUpdateTasks.Add(_database.SetLastUpdatedAsync(steamId64, DateTimeOffset.Now.ToUnixTimeSeconds()));
+                try
+                {
+                    await UpdatePlayerSummaryInDb(player, token);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[DoEnrichment] Failed to save summary for {steamId64}: {ex.Message}");
+                }
             }
-
-            await Task.WhenAll(allUpdateTasks);
         }
 
-        private Task UpdatePlayerSummaryInDb(Player player)
+        private async Task UpdatePlayerSummaryInDb(Player player, CancellationToken token)
         {
-            if (!long.TryParse(player.SteamId64, out var steamId64)) return Task.CompletedTask;
-            var tasks = new List<Task>
-            {
-                _database.SetPersonaNameAsync(steamId64, player.PersonaName),
-                _database.SetTimeCreatedAsync(steamId64, player.TimeCreated),
-                _database.SetAvatarHashAsync(steamId64, player.AvatarHash),
-                _database.SetProfileStatusAsync(steamId64, player.ProfileStatus),
-                _database.SetLastUpdatedAsync(steamId64, DateTimeOffset.Now.ToUnixTimeSeconds())
-            };
+            if (!long.TryParse(player.SteamId64, out var steamId64)) return;
+
+            try { await _database.SetPersonaNameAsync(steamId64, player.PersonaName); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Repository] Failed to save PersonaName for {steamId64}: {ex.Message}"); }
+
+            try { await _database.SetTimeCreatedAsync(steamId64, player.TimeCreated); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Repository] Failed to save TimeCreated for {steamId64}: {ex.Message}"); }
+
+            try { await _database.SetAvatarHashAsync(steamId64, player.AvatarHash); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Repository] Failed to save AvatarHash for {steamId64}: {ex.Message}"); }
+
+            try { await _database.SetProfileStatusAsync(steamId64, player.ProfileStatus); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Repository] Failed to save ProfileStatus for {steamId64}: {ex.Message}"); }
+
+            try { await _database.SetLastUpdatedAsync(steamId64, DateTimeOffset.Now.ToUnixTimeSeconds()); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Repository] Failed to save LastUpdated for {steamId64}: {ex.Message}"); }
+
             if (!string.IsNullOrEmpty(player.AvatarHash) && !player.IsAvatarCached)
             {
-                tasks.Add(DownloadAvatarAsync(player, player.AvatarHash, _cts.Token));
+                try { await DownloadAvatarAsync(player, player.AvatarHash, token); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Repository] Failed to download avatar for {steamId64}: {ex.Message}"); }
             }
-            return Task.WhenAll(tasks);
         }
 
         private Task UpdatePlayerBansInDb(Player player)
@@ -340,10 +410,13 @@ namespace GSRP.Services
         {
             if (string.IsNullOrEmpty(avatarHash)) return;
 
-            await _avatarDownloadSemaphore.WaitAsync(token);
-            player.IsUpdating = true;
+            bool semaphoreAcquired = false;
             try
             {
+                await _avatarDownloadSemaphore.WaitAsync(token);
+                semaphoreAcquired = true;
+                player.IsUpdating = true;
+
                 token.ThrowIfCancellationRequested();
 
                 var avatarUrl = $"https://avatars.steamstatic.com/{avatarHash}_medium.jpg";
@@ -385,7 +458,10 @@ namespace GSRP.Services
             finally
             {
                 player.IsUpdating = false;
-                _avatarDownloadSemaphore.Release();
+                if (semaphoreAcquired)
+                {
+                    _avatarDownloadSemaphore.Release();
+                }
             }
         }
 
@@ -633,6 +709,8 @@ namespace GSRP.Services
         {
             _cts.Cancel();
             _cts.Dispose();
+            _clipboardCts.Cancel();
+            _clipboardCts.Dispose();
             PlayersUpdated = null;
             lock (_lock) _currentPlayers.Clear();
         }
@@ -642,8 +720,11 @@ namespace GSRP.Services
             if (string.IsNullOrEmpty(avatarHash))
                 return string.Empty;
 
-            var path = Path.Combine(_pathProvider.GetCachePath(), $"{avatarHash}.jpg");
-            return File.Exists(path) ? path : string.Empty;
+            return _avatarPathCache.GetOrAdd(avatarHash, hash =>
+            {
+                var path = Path.Combine(_pathProvider.GetCachePath(), $"{hash}.jpg");
+                return File.Exists(path) ? path : string.Empty;
+            });
         }
 
         public async Task<List<Player>> SearchPlayersAsync(string searchTerm, string? steamId64Term, bool exactMatch)
@@ -665,8 +746,6 @@ namespace GSRP.Services
                     PersonaName = result.Data.PersonaName,
                     IconName = result.Data.IconName,
                     IconPath = _iconService.ResolveIconPath(result.Data.IconName) ?? string.Empty,
-                    AvatarPath = GetAvatarPath(result.Data.AvatarHash),
-                    IsAvatarCached = !string.IsNullOrEmpty(GetAvatarPath(result.Data.AvatarHash)),
                     IsCommunityBanned = result.Data.IsCommunityBanned,
                     NumberOfVacBans = result.Data.NumberOfVacBans,
                     LastVacCheck = result.Data.LastVacCheck,
@@ -675,7 +754,8 @@ namespace GSRP.Services
                     ProfileStatus = result.Data.ProfileStatus,
                     LastUpdated = result.Data.LastUpdated
                 };
-
+                player.AvatarPath = GetAvatarPath(player.AvatarHash);
+                player.IsAvatarCached = !string.IsNullOrEmpty(player.AvatarPath);
                 player.Name = result.Data.PersonaName;
                 players.Add(player);
             }

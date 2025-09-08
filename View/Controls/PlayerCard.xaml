@@ -35,7 +35,7 @@
         </Border.Effect>
 
         <Border.ContextMenu>
-            <ContextMenu Style="{StaticResource ThemedContextMenu}">
+            <ContextMenu Style="{StaticResource ThemedContextMenu}" ContextMenuOpening="ContextMenu_ContextMenuOpening">
                 <MenuItem Header="Copy Name"
                           Style="{StaticResource ThemedMenuItem}"
                           Command="{Binding PlacementTarget.Tag.CopyPlayerNameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"

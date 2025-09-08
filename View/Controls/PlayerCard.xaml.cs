@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace GSRP.Views.Controls
 {
@@ -12,46 +13,47 @@ namespace GSRP.Views.Controls
         public PlayerCard()
         {
             InitializeComponent();
-            Loaded += PlayerCard_Loaded;
         }
 
-        private void PlayerCard_Loaded(object sender, RoutedEventArgs e)
+        private void ContextMenu_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
-            // Create the dynamic submenu for "Copy as Report"
-            if (Tag is MainViewModel viewModel && CopyAsReportMenuItem != null)
+            var viewModel = FindParentViewModel<MainViewModel>(this);
+            if (viewModel == null || CopyAsReportMenuItem == null) return;
+
+            CopyAsReportMenuItem.Items.Clear();
+
+            if (viewModel.ServerList.Any())
             {
-                CopyAsReportMenuItem.Items.Clear();
-                if (viewModel.ServerList.Any())
+                foreach (var server in viewModel.ServerList)
                 {
-                    foreach (var server in viewModel.ServerList)
+                    var subMenuItem = new MenuItem
                     {
-                        var subMenuItem = new MenuItem
-                        {
-                            Header = server,
-                            Style = (Style)FindResource("ThemedMenuItem")
-                        };
-                        subMenuItem.Click += SubMenuItem_Click;
-                        CopyAsReportMenuItem.Items.Add(subMenuItem);
-                    }
-                }
-                else
-                {
-                    // Add a disabled item to inform the user that the list is empty
-                    CopyAsReportMenuItem.Items.Add(new MenuItem
-                    {
-                        Header = "No servers configured",
-                        IsEnabled = false,
+                        Header = server,
                         Style = (Style)FindResource("ThemedMenuItem")
-                    });
+                    };
+                    subMenuItem.Click += SubMenuItem_Click;
+                    CopyAsReportMenuItem.Items.Add(subMenuItem);
                 }
+                CopyAsReportMenuItem.IsEnabled = true;
+            }
+            else
+            {
+                CopyAsReportMenuItem.Items.Add(new MenuItem
+                {
+                    Header = "No servers configured",
+                    IsEnabled = false,
+                    Style = (Style)FindResource("ThemedMenuItem")
+                });
+                CopyAsReportMenuItem.IsEnabled = false;
             }
         }
 
         private void SubMenuItem_Click(object sender, RoutedEventArgs e)
         {
+            var viewModel = FindParentViewModel<MainViewModel>(this);
             if (sender is not MenuItem { Header: string serverName } clickedMenuItem) return;
             if (DataContext is not Player player) return;
-            if (Tag is not MainViewModel viewModel) return;
+            if (viewModel == null) return;
 
             var parameter = new Tuple<object, object>(player, serverName);
             if (viewModel.CopyReportForServerCommand.CanExecute(parameter))
@@ -71,13 +73,27 @@ namespace GSRP.Views.Controls
 
         private void UpdateVacStatus_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is Player player && Tag is MainViewModel viewModel)
+            var viewModel = FindParentViewModel<MainViewModel>(this);
+            if (DataContext is Player player && viewModel != null)
             {
                 if (viewModel.UpdateSinglePlayerVacStatusCommand.CanExecute(player))
                 {
                     viewModel.UpdateSinglePlayerVacStatusCommand.Execute(player);
                 }
             }
+        }
+
+        private static T? FindParentViewModel<T>(DependencyObject child) where T : class
+        {
+            DependencyObject parentObject = VisualTreeHelper.GetParent(child);
+            if (parentObject == null) return null;
+
+            if (parentObject is FrameworkElement parent && parent.DataContext is T viewModel)
+            {
+                return viewModel;
+            }
+            
+            return FindParentViewModel<T>(parentObject);
         }
     }
 }

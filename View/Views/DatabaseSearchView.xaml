@@ -122,8 +122,7 @@
                 <ItemsControl ItemsSource="{Binding DbSearchResults}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <controls:PlayerCard DataContext="{Binding}"
-                                                 Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
+                            <controls:PlayerCard DataContext="{Binding}" />
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

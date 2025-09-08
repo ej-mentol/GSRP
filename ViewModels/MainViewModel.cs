@@ -135,8 +135,6 @@ namespace GSRP.ViewModels
             FilteredConsoleOutput = CollectionViewSource.GetDefaultView(_udpConsoleService.ConsoleOutput);
             FilteredConsoleOutput.Filter = FilterConsoleMessages;
 
-            UpdateSinglePlayerVacStatusCommand = new AsyncRelayCommand<Player?>(UpdateSinglePlayerVacStatusAsync, CanUpdateSinglePlayerVacStatus);
-
             _playerRepository.PlayersUpdated += OnPlayersUpdated;
             _clipboardService.ClipboardChanged += OnClipboardChanged;
             _settingsService.SettingsChanged += OnSettingsChanged;
@@ -145,26 +143,32 @@ namespace GSRP.ViewModels
             StartMonitoring();
             RefreshPlayers();
 
-            UpdatePlayerAliasAsyncCommand = new AsyncRelayCommand<Player?>(UpdatePlayerAliasAsync);
-            SetPlayerGameColorAsyncCommand = new AsyncRelayCommand<Player?>(p => SetPlayerColorAsync(p, ColorTarget.GameName));
-            SetPlayerSteamColorAsyncCommand = new AsyncRelayCommand<Player?>(p => SetPlayerColorAsync(p, ColorTarget.SteamName));
-            SetPlayerAliasColorAsyncCommand = new AsyncRelayCommand<Player?>(SetPlayerAliasColorAsync);
-            SetPlayerIconAsyncCommand = new AsyncRelayCommand<Tuple<object, object>?>(SetPlayerIconAsync);
-            OpenInBrowserCommand = new RelayCommand<Player?>(OpenInBrowser);
+            // Commands
+            UpdateSinglePlayerVacStatusCommand = new AsyncRelayCommand<Player?>(UpdateSinglePlayerVacStatusAsync, CanUpdateSinglePlayerVacStatus);
+            UpdatePlayerAliasAsyncCommand = new AsyncRelayCommand<Player?>(UpdatePlayerAliasAsync, CanExecuteOnIdlePlayer);
+            SetPlayerGameColorAsyncCommand = new AsyncRelayCommand<Player?>(p => SetPlayerColorAsync(p, ColorTarget.GameName), CanExecuteOnIdlePlayer);
+            SetPlayerSteamColorAsyncCommand = new AsyncRelayCommand<Player?>(p => SetPlayerColorAsync(p, ColorTarget.SteamName), CanExecuteOnIdlePlayer);
+            SetPlayerAliasColorAsyncCommand = new AsyncRelayCommand<Player?>(SetPlayerAliasColorAsync, CanExecuteOnIdlePlayer);
+            SetPlayerIconAsyncCommand = new AsyncRelayCommand<Tuple<object, object>?>(SetPlayerIconAsync, CanExecuteOnIdlePlayerTuple);
+            CreatePlayerCardImageCommand = new AsyncRelayCommand<Player?>(CreatePlayerCardImageAsync, CanExecuteOnIdlePlayer);
 
+            // These commands work with static data and don't need to be disabled during updates
+            OpenInBrowserCommand = new RelayCommand<Player?>(OpenInBrowser);
             CopyPlayerIdCommand = new RelayCommand<Player?>(CopyPlayerId);
             CopyPlayerSteamId2Command = new RelayCommand<Player?>(CopyPlayerSteamId2);
             CopyPlayerNameCommand = new RelayCommand<Player?>(CopyPlayerName);
             CopyPlayerAliasCommand = new RelayCommand<Player?>(CopyPlayerAlias);
-            
             CopyPlayerToReportCommand = new RelayCommand<Player?>(CopyPlayerToReport);
             CopyReportForServerCommand = new RelayCommand<object>(CopyReportForServer);
-            CreatePlayerCardImageCommand = new AsyncRelayCommand<Player?>(CreatePlayerCardImageAsync);
+            
             SearchDatabaseCommand = new AsyncRelayCommand(SearchDatabaseAsync, () => !string.IsNullOrWhiteSpace(DbSearchTerm));
             ClearSearchTextCommand = new RelayCommand(() => SearchText = string.Empty);
             ClearDbSearchTextCommand = new RelayCommand(() => DbSearchTerm = string.Empty);
             TestCommand = new RelayCommand(() => _dialogService.ShowMessageDialog("Test", "Command was executed!"));
         }
+
+        private bool CanExecuteOnIdlePlayer(Player? player) => player != null && !player.IsBusy;
+        private bool CanExecuteOnIdlePlayerTuple(Tuple<object, object>? parameters) => parameters?.Item1 is Player player && !player.IsBusy;
 
         private async Task CreatePlayerCardImageAsync(Player? player)
         {
@@ -523,9 +527,7 @@ namespace GSRP.ViewModels
 
         private bool CanUpdateSinglePlayerVacStatus(Player? player)
         {
-            // The button should be enabled if we have a player and an API key.
-            // The decision to show a message will be handled inside the command execution.
-            return player != null && !string.IsNullOrEmpty(_apiKeyService.GetApiKey());
+            return player != null && !player.IsBusy && !string.IsNullOrEmpty(_apiKeyService.GetApiKey());
         }
         
         public void Dispose()
