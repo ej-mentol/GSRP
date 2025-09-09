@@ -316,14 +316,15 @@ namespace GSRP.Services
         public Task UpdatePlayerBanStatusAsync(long steamId64, bool isCommunityBanned, string economyBan, int numberOfVacBans, long banDate, long lastVacCheck)
         {
             var sql = $@"
-                INSERT INTO players (steam_id64, is_community_banned, economy_ban, number_of_vac_bans, ban_date, last_vac_check) 
-                VALUES (@steamId, @isCommunityBanned, @economyBan, @numberOfVacBans, @banDate, @lastVacCheck)
+                INSERT INTO players (steam_id64, is_community_banned, economy_ban, number_of_vac_bans, ban_date, last_vac_check, last_updated) 
+                VALUES (@steamId, @isCommunityBanned, @economyBan, @numberOfVacBans, @banDate, @lastVacCheck, @lastUpdated)
                 ON CONFLICT(steam_id64) DO UPDATE SET 
                     is_community_banned = excluded.is_community_banned,
                     economy_ban = excluded.economy_ban,
                     number_of_vac_bans = excluded.number_of_vac_bans,
                     ban_date = excluded.ban_date,
-                    last_vac_check = excluded.last_vac_check;";
+                    last_vac_check = excluded.last_vac_check,
+                    last_updated = @lastUpdated;";
 
             return EnqueueOperationAsync(() => ExecuteNonQueryAsync(sql,
                 new SqliteParameter("@steamId", steamId64.ToString()),
@@ -331,7 +332,8 @@ namespace GSRP.Services
                 new SqliteParameter("@economyBan", economyBan),
                 new SqliteParameter("@numberOfVacBans", numberOfVacBans),
                 new SqliteParameter("@banDate", banDate),
-                new SqliteParameter("@lastVacCheck", lastVacCheck)));
+                new SqliteParameter("@lastVacCheck", lastVacCheck),
+                new SqliteParameter("@lastUpdated", DateTimeOffset.Now.ToUnixTimeSeconds())));
         }
 
         public void Dispose()

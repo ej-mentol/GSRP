@@ -24,7 +24,7 @@
             <ItemsControl ItemsSource="{Binding FilteredPlayers}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <controls:PlayerCard DataContext="{Binding}" />
+                        <controls:PlayerCard DataContext="{Binding}" Tag="{Binding DataContext, RelativeSource={RelativeSource FindAncestor, AncestorType=ItemsControl}}" />
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

@@ -15,45 +15,50 @@ namespace GSRP.Views.Controls
             InitializeComponent();
         }
 
+        
+
+        
+
         private void ContextMenu_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
-            var viewModel = FindParentViewModel<MainViewModel>(this);
-            if (viewModel == null || CopyAsReportMenuItem == null) return;
-
-            CopyAsReportMenuItem.Items.Clear();
-
-            if (viewModel.ServerList.Any())
+            if (sender is ContextMenu menu)
             {
-                foreach (var server in viewModel.ServerList)
+                var copyAsReportMenuItem = menu.Items.OfType<MenuItem>().FirstOrDefault(item => item.Name == "CopyAsReportMenuItem");
+
+                if (copyAsReportMenuItem != null && DataContext is Player player && FindParentViewModel<MainViewModel>(this) is MainViewModel viewModel)
                 {
-                    var subMenuItem = new MenuItem
+                    copyAsReportMenuItem.Items.Clear();
+                    if (viewModel.ServerList.Any())
                     {
-                        Header = server,
-                        Style = (Style)FindResource("ThemedMenuItem")
-                    };
-                    subMenuItem.Click += SubMenuItem_Click;
-                    CopyAsReportMenuItem.Items.Add(subMenuItem);
+                        foreach (var server in viewModel.ServerList)
+                        {
+                            var subMenuItem = new MenuItem
+                            {
+                                Header = server,
+                                Style = (Style)FindResource("ThemedMenuItem")
+                            };
+                            subMenuItem.Click += SubMenuItem_Click;
+                            copyAsReportMenuItem.Items.Add(subMenuItem);
+                        }
+                    }
+                    else
+                    {
+                        copyAsReportMenuItem.Items.Add(new MenuItem
+                        {
+                            Header = "No servers configured",
+                            IsEnabled = false,
+                            Style = (Style)FindResource("ThemedMenuItem")
+                        });
+                    }
                 }
-                CopyAsReportMenuItem.IsEnabled = true;
-            }
-            else
-            {
-                CopyAsReportMenuItem.Items.Add(new MenuItem
-                {
-                    Header = "No servers configured",
-                    IsEnabled = false,
-                    Style = (Style)FindResource("ThemedMenuItem")
-                });
-                CopyAsReportMenuItem.IsEnabled = false;
             }
         }
 
         private void SubMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            var viewModel = FindParentViewModel<MainViewModel>(this);
             if (sender is not MenuItem { Header: string serverName } clickedMenuItem) return;
             if (DataContext is not Player player) return;
-            if (viewModel == null) return;
+            if (FindParentViewModel<MainViewModel>(this) is not MainViewModel viewModel) return;
 
             var parameter = new Tuple<object, object>(player, serverName);
             if (viewModel.CopyReportForServerCommand.CanExecute(parameter))
@@ -71,17 +76,7 @@ namespace GSRP.Views.Controls
             }
         }
 
-        private void UpdateVacStatus_Click(object sender, RoutedEventArgs e)
-        {
-            var viewModel = FindParentViewModel<MainViewModel>(this);
-            if (DataContext is Player player && viewModel != null)
-            {
-                if (viewModel.UpdateSinglePlayerVacStatusCommand.CanExecute(player))
-                {
-                    viewModel.UpdateSinglePlayerVacStatusCommand.Execute(player);
-                }
-            }
-        }
+        
 
         private static T? FindParentViewModel<T>(DependencyObject child) where T : class
         {

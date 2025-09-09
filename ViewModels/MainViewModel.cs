@@ -99,6 +99,7 @@ namespace GSRP.ViewModels
         public ICommand CopyPlayerSteamId2Command { get; }
         public ICommand CopyPlayerNameCommand { get; }
         public ICommand CopyPlayerAliasCommand { get; }
+        public ICommand CopyPlayerPersonaNameCommand { get; }
         public IAsyncRelayCommand UpdateSinglePlayerVacStatusCommand { get; }
         public ICommand CopyPlayerToReportCommand { get; }
         public ICommand CopyReportForServerCommand { get; }
@@ -154,10 +155,11 @@ namespace GSRP.ViewModels
 
             // These commands work with static data and don't need to be disabled during updates
             OpenInBrowserCommand = new RelayCommand<Player?>(OpenInBrowser);
-            CopyPlayerIdCommand = new RelayCommand<Player?>(CopyPlayerId);
-            CopyPlayerSteamId2Command = new RelayCommand<Player?>(CopyPlayerSteamId2);
-            CopyPlayerNameCommand = new RelayCommand<Player?>(CopyPlayerName);
-            CopyPlayerAliasCommand = new RelayCommand<Player?>(CopyPlayerAlias);
+            CopyPlayerIdCommand = new RelayCommand<Player?>(CopyPlayerId, CanCopyPlayerId);
+            CopyPlayerSteamId2Command = new RelayCommand<Player?>(CopyPlayerSteamId2, CanCopyPlayerSteamId2);
+            CopyPlayerNameCommand = new RelayCommand<Player?>(CopyPlayerName, CanCopyPlayerName);
+            CopyPlayerAliasCommand = new RelayCommand<Player?>(CopyPlayerAlias, CanCopyPlayerAlias);
+            CopyPlayerPersonaNameCommand = new RelayCommand<Player?>(CopyPlayerPersonaName, CanCopyPlayerPersonaName);
             CopyPlayerToReportCommand = new RelayCommand<Player?>(CopyPlayerToReport);
             CopyReportForServerCommand = new RelayCommand<object>(CopyReportForServer);
             
@@ -166,6 +168,12 @@ namespace GSRP.ViewModels
             ClearDbSearchTextCommand = new RelayCommand(() => DbSearchTerm = string.Empty);
             TestCommand = new RelayCommand(() => _dialogService.ShowMessageDialog("Test", "Command was executed!"));
         }
+
+        private bool CanCopyPlayerId(Player? p) => p != null && !string.IsNullOrEmpty(p.SteamId64);
+        private bool CanCopyPlayerSteamId2(Player? p) => p != null && (!string.IsNullOrEmpty(p.ParsedSteamId2) || !string.IsNullOrEmpty(p.SteamId2));
+        private bool CanCopyPlayerName(Player? p) => p != null && !string.IsNullOrEmpty(p.Name);
+        private bool CanCopyPlayerAlias(Player? p) => p != null && !string.IsNullOrEmpty(p.Alias);
+        private bool CanCopyPlayerPersonaName(Player? p) => p != null && !string.IsNullOrEmpty(p.PersonaName);
 
         private bool CanExecuteOnIdlePlayer(Player? player) => player != null && !player.IsBusy;
         private bool CanExecuteOnIdlePlayerTuple(Tuple<object, object>? parameters) => parameters?.Item1 is Player player && !player.IsBusy;
@@ -365,9 +373,38 @@ namespace GSRP.ViewModels
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
+                foreach (var player in _allPlayers)
+                {
+                    player.IsBusyChanged -= OnPlayerIsBusyChanged;
+                }
+
                 _allPlayers.Clear();
-                foreach (var player in players) _allPlayers.Add(player);
+                foreach (var player in players)
+                {
+                    player.IsBusyChanged += OnPlayerIsBusyChanged;
+                    _allPlayers.Add(player);
+                }
                 FilterPlayers(_cts.Token); // Initial filter
+
+                // Обновляем состояние команд копирования после обновления данных
+                ((RelayCommand<Player?>)CopyPlayerIdCommand).NotifyCanExecuteChanged();
+                ((RelayCommand<Player?>)CopyPlayerSteamId2Command).NotifyCanExecuteChanged();
+                ((RelayCommand<Player?>)CopyPlayerNameCommand).NotifyCanExecuteChanged();
+                ((RelayCommand<Player?>)CopyPlayerAliasCommand).NotifyCanExecuteChanged();
+            });
+        }
+
+        private void OnPlayerIsBusyChanged()
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                (UpdatePlayerAliasAsyncCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                (SetPlayerGameColorAsyncCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                (SetPlayerSteamColorAsyncCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                (SetPlayerAliasColorAsyncCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                (SetPlayerIconAsyncCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                (CreatePlayerCardImageCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                UpdateSinglePlayerVacStatusCommand.NotifyCanExecuteChanged();
             });
         }
 
@@ -407,11 +444,14 @@ namespace GSRP.ViewModels
 
                 if (token.IsCancellationRequested) return;
 
-                FilteredPlayers.Clear();
-                foreach (var player in filtered) FilteredPlayers.Add(player);
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    FilteredPlayers.Clear();
+                    foreach (var player in filtered) FilteredPlayers.Add(player);
 
-                OnPropertyChanged(nameof(PlayerCount));
-                OnPropertyChanged(nameof(PlayersTabHeader));
+                    OnPropertyChanged(nameof(PlayerCount));
+                    OnPropertyChanged(nameof(PlayersTabHeader));
+                });
             }
             catch (OperationCanceledException)
             {
@@ -486,6 +526,7 @@ namespace GSRP.ViewModels
         private void CopyPlayerSteamId2(Player? player) => CopyToClipboard(player?.ParsedSteamId2 ?? player?.SteamId2, "SteamID");
         private void CopyPlayerName(Player? player) => CopyToClipboard(player?.Name, "Name");
         private void CopyPlayerAlias(Player? player) => CopyToClipboard(player?.Alias, "Alias");
+        private void CopyPlayerPersonaName(Player? player) => CopyToClipboard(player?.PersonaName, "PersonaName");
         
         private async Task UpdateSinglePlayerVacStatusAsync(Player? player)
         {
@@ -522,6 +563,12 @@ namespace GSRP.ViewModels
                 player.IsCheckingBans = false;
                 StatusMessage = "Player Database & Reporting";
                 UpdateSinglePlayerVacStatusCommand.NotifyCanExecuteChanged();
+
+                // Обновляем команды копирования для этого игрока
+                ((RelayCommand<Player?>)CopyPlayerIdCommand).NotifyCanExecuteChanged();
+                ((RelayCommand<Player?>)CopyPlayerSteamId2Command).NotifyCanExecuteChanged();
+                ((RelayCommand<Player?>)CopyPlayerNameCommand).NotifyCanExecuteChanged();
+                ((RelayCommand<Player?>)CopyPlayerAliasCommand).NotifyCanExecuteChanged();
             }
         }
 
@@ -539,6 +586,12 @@ namespace GSRP.ViewModels
             _settingsService.SettingsChanged -= OnSettingsChanged;
             _playerRepository.PlayersUpdated -= OnPlayersUpdated;
             _clipboardService.ClipboardChanged -= OnClipboardChanged;
+
+            foreach (var player in _allPlayers)
+            {
+                player.IsBusyChanged -= OnPlayerIsBusyChanged;
+            }
+
             _clipboardService?.Dispose();
             _playerRepository?.Dispose();
             _udpConsoleService?.Dispose();

@@ -68,6 +68,8 @@ public partial class Player : ObservableObject
     [ObservableProperty]
     private string _avatarPath = string.Empty;
 
+    public event Action? IsBusyChanged;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy))]
     private bool _isUpdating;
@@ -83,6 +85,9 @@ public partial class Player : ObservableObject
     private bool _isCheckingBans;
 
     public bool IsBusy => IsUpdating || IsCheckingBans;
+
+    partial void OnIsUpdatingChanged(bool value) => IsBusyChanged?.Invoke();
+    partial void OnIsCheckingBansChanged(bool value) => IsBusyChanged?.Invoke();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ProfileStatusText))]

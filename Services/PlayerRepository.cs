@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Media;
 using GSRP.Models;
 using GSRP.Models.SteamApi;
@@ -381,8 +382,19 @@ namespace GSRP.Services
 
             if (!string.IsNullOrEmpty(player.AvatarHash) && !player.IsAvatarCached)
             {
-                try { await DownloadAvatarAsync(player, player.AvatarHash, token); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Repository] Failed to download avatar for {steamId64}: {ex.Message}"); }
+                player.IsUpdating = true; // Set IsUpdating here
+                try
+                {
+                    await DownloadAvatarAsync(player, player.AvatarHash, token);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Repository] Failed to download avatar for {steamId64}: {ex.Message}");
+                }
+                finally
+                {
+                    player.IsUpdating = false; // Reset IsUpdating here
+                }
             }
         }
 
@@ -415,7 +427,6 @@ namespace GSRP.Services
             {
                 await _avatarDownloadSemaphore.WaitAsync(token);
                 semaphoreAcquired = true;
-                player.IsUpdating = true;
 
                 token.ThrowIfCancellationRequested();
 
@@ -424,9 +435,13 @@ namespace GSRP.Services
 
                 if (File.Exists(avatarPath))
                 {
-                    player.AvatarPath = avatarPath;
-                    player.IsAvatarCached = true;
-                    player.AvatarDownloadFailed = false;
+                    _avatarPathCache[avatarHash] = avatarPath;
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        player.AvatarPath = avatarPath;
+                        player.IsAvatarCached = true;
+                        player.AvatarDownloadFailed = false;
+                    });
                     return;
                 }
 
@@ -437,13 +452,20 @@ namespace GSRP.Services
                 {
                     var imageBytes = await response.Content.ReadAsByteArrayAsync(token);
                     await File.WriteAllBytesAsync(avatarPath, imageBytes, token);
-                    player.AvatarPath = avatarPath;
-                    player.IsAvatarCached = true;
-                    player.AvatarDownloadFailed = false;
+                    _avatarPathCache[avatarHash] = avatarPath;
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        player.AvatarPath = avatarPath;
+                        player.IsAvatarCached = true;
+                        player.AvatarDownloadFailed = false;
+                    });
                 }
                 else
                 {
-                    player.AvatarDownloadFailed = true;
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        player.AvatarDownloadFailed = true;
+                    });
                 }
             }
             catch (OperationCanceledException)
@@ -457,7 +479,6 @@ namespace GSRP.Services
             }
             finally
             {
-                player.IsUpdating = false;
                 if (semaphoreAcquired)
                 {
                     _avatarDownloadSemaphore.Release();
@@ -685,24 +706,30 @@ namespace GSRP.Services
 
         private void ApplySummaryDataToPlayer(Player player, PlayerData summary)
         {
-            player.ProfileStatus = summary.IsPrivate ? ProfileStatus.Private : ProfileStatus.Public;
-            player.PersonaName = summary.PersonaName;
-            player.TimeCreated = summary.TimeCreated;
-            player.AvatarHash = summary.AvatarHash;
-            player.AvatarPath = GetAvatarPath(player.AvatarHash);
-            player.IsAvatarCached = !string.IsNullOrEmpty(player.AvatarPath);
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                player.ProfileStatus = summary.IsPrivate ? ProfileStatus.Private : ProfileStatus.Public;
+                player.PersonaName = summary.PersonaName;
+                player.TimeCreated = summary.TimeCreated;
+                player.AvatarHash = summary.AvatarHash;
+                player.AvatarPath = GetAvatarPath(player.AvatarHash);
+                player.IsAvatarCached = !string.IsNullOrEmpty(player.AvatarPath);
+            });
         }
 
         private void ApplyBanDataToPlayer(Player player, PlayerBanData banData)
         {
-            player.IsCommunityBanned = banData.CommunityBanned;
-            player.EconomyBan = banData.EconomyBan;
-            player.NumberOfVacBans = banData.NumberOfVACBans;
-            long banDate = (banData.DaysSinceLastBan > 0)
-                ? DateTimeOffset.Now.ToUnixTimeSeconds() - (banData.DaysSinceLastBan * 86400L)
-                : 0;
-            player.BanDate = banDate;
-            player.LastVacCheck = DateTimeOffset.Now.ToUnixTimeSeconds();
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                player.IsCommunityBanned = banData.CommunityBanned;
+                player.EconomyBan = banData.EconomyBan;
+                player.NumberOfVacBans = banData.NumberOfVACBans;
+                long banDate = (banData.DaysSinceLastBan > 0)
+                    ? DateTimeOffset.Now.ToUnixTimeSeconds() - (banData.DaysSinceLastBan * 86400L)
+                    : 0;
+                player.BanDate = banDate;
+                player.LastVacCheck = DateTimeOffset.Now.ToUnixTimeSeconds();
+            });
         }
 
         public void Dispose()

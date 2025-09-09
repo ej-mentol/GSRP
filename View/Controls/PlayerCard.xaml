@@ -8,17 +8,20 @@
              xmlns:ui="http://schemas.modernwpf.com/2019">
 
     <UserControl.Resources>
-        <conv:IconCornerToHorizontalAlignmentConverter x:Key="CornerToHorizontal"/>
-        <conv:IconCornerToVerticalAlignmentConverter x:Key="CornerToVertical"/>
-        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
-        <conv:StringToImageSourceConverter x:Key="StringToImage"/>
-        <conv:IconOffsetToMarginConverter x:Key="IconOffsetToMargin"/>
-        <conv:TupleConverter x:Key="TupleConverter"/>
-        <conv:PathToImageConverter x:Key="PathToImage"/>
-        <conv:IsGreaterThanZeroConverter x:Key="IsGreaterThanZeroConverter"/>
-        <conv:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter"/>
-        <conv:BanTooltipConverter x:Key="BanTooltipConverter"/>
-        <conv:IsNullOrEmptyToVisibilityConverter x:Key="IsNullOrEmptyToVisibilityConverter"/>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="PlayerCardContextMenus.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <conv:IconCornerToHorizontalAlignmentConverter x:Key="CornerToHorizontal"/>
+            <conv:IconCornerToVerticalAlignmentConverter x:Key="CornerToVertical"/>
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+            <conv:StringToImageSourceConverter x:Key="StringToImage"/>
+            <conv:IconOffsetToMarginConverter x:Key="IconOffsetToMargin"/>
+            <conv:IsGreaterThanZeroConverter x:Key="IsGreaterThanZeroConverter"/>
+            <conv:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter"/>
+            <conv:BanTooltipConverter x:Key="BanTooltipConverter"/>
+            <conv:IsNullOrEmptyToVisibilityConverter x:Key="IsNullOrEmptyToVisibilityConverter"/>
+        </ResourceDictionary>
     </UserControl.Resources>
 
     <Border x:Name="MainBorder"
@@ -35,142 +38,7 @@
         </Border.Effect>
 
         <Border.ContextMenu>
-            <ContextMenu Style="{StaticResource ThemedContextMenu}" ContextMenuOpening="ContextMenu_ContextMenuOpening">
-                <MenuItem Header="Copy Name"
-                          Style="{StaticResource ThemedMenuItem}"
-                          Command="{Binding PlacementTarget.Tag.CopyPlayerNameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                    <MenuItem.Icon>
-                        <Border Background="#3b82f6" CornerRadius="3" Width="16" Height="16">
-                            <TextBlock Text="👤" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </MenuItem.Icon>
-                </MenuItem>
-
-                <MenuItem Header="Copy Alias"
-                          Style="{StaticResource ThemedMenuItem}"
-                          Command="{Binding PlacementTarget.Tag.CopyPlayerAliasCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                    <MenuItem.Icon>
-                        <Border Background="#10b981" CornerRadius="3" Width="16" Height="16">
-                            <TextBlock Text="📝" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </MenuItem.Icon>
-                </MenuItem>
-
-                <MenuItem Header="Copy SteamID64"
-                          Style="{StaticResource ThemedMenuItem}"
-                          Command="{Binding PlacementTarget.Tag.CopyPlayerIdCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                    <MenuItem.Icon>
-                        <Border Background="#f59e0b" CornerRadius="3" Width="16" Height="16">
-                            <TextBlock Text="🔢" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </MenuItem.Icon>
-                </MenuItem>
-
-                <MenuItem Header="Copy SteamID"
-                          Style="{StaticResource ThemedMenuItem}"
-                          Command="{Binding PlacementTarget.Tag.CopyPlayerSteamId2Command, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                    <MenuItem.Icon>
-                        <Border Background="#84cc16" CornerRadius="3" Width="16" Height="16">
-                            <TextBlock Text="🆔" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </MenuItem.Icon>
-                </MenuItem>
-
-                <MenuItem Header="Open in Browser"
-                          Style="{StaticResource ThemedMenuItem}"
-                          Command="{Binding PlacementTarget.Tag.OpenInBrowserCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                    <MenuItem.Icon>
-                        <Border Background="#10b981" CornerRadius="3" Width="16" Height="16">
-                            <TextBlock Text="🌐" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </MenuItem.Icon>
-                </MenuItem>
-
-                <Separator/>
-
-                <MenuItem Header="Copy to Report"
-                          Style="{StaticResource ThemedMenuItem}"
-                          Command="{Binding PlacementTarget.Tag.CopyPlayerToReportCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                    <MenuItem.Icon>
-                        <Border Background="#ef4444" CornerRadius="3" Width="16" Height="16">
-                            <TextBlock Text="🚩" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </MenuItem.Icon>
-                </MenuItem>
-
-                <MenuItem Header="Copy as Report" Style="{StaticResource ThemedMenuItem}" x:Name="CopyAsReportMenuItem" IsEnabled="False">
-                    <MenuItem.Icon>
-                        <Border Background="#d946ef" CornerRadius="3" Width="16" Height="16">
-                            <TextBlock Text="📜" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </MenuItem.Icon>
-                </MenuItem>
-
-                <Separator/>
-
-                <MenuItem Header="Set Alias"
-                          Style="{StaticResource ThemedMenuItem}"
-                          Command="{Binding PlacementTarget.Tag.UpdatePlayerAliasAsyncCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                    <MenuItem.Icon>
-                        <Border Background="#06b6d4" CornerRadius="3" Width="16" Height="16">
-                            <TextBlock Text="✏️" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </MenuItem.Icon>
-                </MenuItem>
-
-                <MenuItem Header="Change Game Color"
-                          Style="{StaticResource ThemedMenuItem}"
-                          Command="{Binding PlacementTarget.Tag.SetPlayerGameColorAsyncCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                    <MenuItem.Icon>
-                        <Border Background="#ec4899" CornerRadius="3" Width="16" Height="16">
-                            <TextBlock Text="🎨" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </MenuItem.Icon>
-                </MenuItem>
-
-                <MenuItem Header="Change Steam Color"
-                          Style="{StaticResource ThemedMenuItem}"
-                          Command="{Binding PlacementTarget.Tag.SetPlayerSteamColorAsyncCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                    <MenuItem.Icon>
-                        <Border Background="#06b6d4" CornerRadius="3" Width="16" Height="16">
-                            <TextBlock Text="🎨" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </MenuItem.Icon>
-                </MenuItem>
-
-                <MenuItem Header="Change Alias Color"
-                          Style="{StaticResource ThemedMenuItem}"
-                          Command="{Binding PlacementTarget.Tag.SetPlayerAliasColorAsyncCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                    <MenuItem.Icon>
-                        <Border Background="#d946ef" CornerRadius="3" Width="16" Height="16">
-                            <TextBlock Text="🎨" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </MenuItem.Icon>
-                </MenuItem>
-
-                <Separator/>
-
-                <MenuItem Header="Copy as Image"
-                          Style="{StaticResource ThemedMenuItem}"
-                          Command="{Binding PlacementTarget.Tag.CreatePlayerCardImageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                    <MenuItem.Icon>
-                        <Border Background="#6366f1" CornerRadius="3" Width="16" Height="16">
-                            <TextBlock Text="📷" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </MenuItem.Icon>
-                </MenuItem>
-            </ContextMenu>
+            <StaticResource ResourceKey="PlayerCardMainContextMenu"/>
         </Border.ContextMenu>
 
         <Grid>
@@ -491,17 +359,7 @@
                     Tag="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=Tag}"
                     Click="MenuButton_Click">
                 <Button.ContextMenu>
-                    <ContextMenu Style="{StaticResource ThemedContextMenu}" x:Name="MenuButtonContextMenu">
-                        <MenuItem Header="Update Profile"
-                                  Style="{StaticResource ThemedMenuItem}"
-                                  Click="UpdateVacStatus_Click">
-                            <MenuItem.Icon>
-                                <Border Background="#3b82f6" CornerRadius="3" Width="16" Height="16">
-                                    <TextBlock Text="🔄" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                            </MenuItem.Icon>
-                        </MenuItem>
-                    </ContextMenu>
+                    <StaticResource ResourceKey="PlayerCardButtonContextMenu"/>
                 </Button.ContextMenu>
 
                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
