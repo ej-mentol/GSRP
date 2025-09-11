@@ -39,7 +39,6 @@ namespace GSRP.Services
                 {
                     System.Diagnostics.Debug.WriteLine($"Error reading API key from registry: {ex.Message}");
 
-                    // Если не можем расшифровать, удаляем поврежденное значение
                     try
                     {
                         Registry.SetValue(RegistryPath, ValueName, "");
@@ -76,7 +75,6 @@ namespace GSRP.Services
 
                     _cachedKey = apiKey;
 
-                    // Очистка памяти
                     Array.Clear(keyBytes, 0, keyBytes.Length);
                     Array.Clear(encryptedBytes, 0, encryptedBytes.Length);
                 }

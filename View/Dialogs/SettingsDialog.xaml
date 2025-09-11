@@ -255,7 +255,7 @@
                             <Button x:Name="DeleteApiKeyButton" Grid.Column="4" Content="Delete Key" Style="{StaticResource DangerButton}" Click="DeleteApiKeyButton_Click"/>
                         </Grid>
 
-                        <CheckBox IsChecked="{Binding CurrentSettings.EnablePeriodicVacCheck, Mode=TwoWay}" 
+                        <CheckBox x:Name="EnablePeriodicVacCheckCheckBox"
                                   Margin="0,12,0,0"
                                   Content="Enable periodic VAC status checks">
                             <CheckBox.ToolTip>

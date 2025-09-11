@@ -9,7 +9,7 @@ namespace GSRP.Services
         {
             File,
             Registry,
-            Auto // Автовыбор
+            Auto 
         }
 
         public static IApiKeyService Create(IPathProvider pathProvider, StorageType type = StorageType.Auto)
@@ -30,10 +30,8 @@ namespace GSRP.Services
 
         private static IApiKeyService CreateBestOption(IPathProvider pathProvider)
         {
-            // Логика автовыбора
             try
             {
-                // Проверяем доступность AppData
                 var appDataPath = pathProvider.GetAppDataPath();
                 if (Directory.Exists(appDataPath) && HasWriteAccess(appDataPath))
                 {
@@ -42,7 +40,7 @@ namespace GSRP.Services
             }
             catch
             {
-                // Если проблемы с файловой системой, используем реестр
+                // 
             }
 
             return new RegistryApiKeyService();

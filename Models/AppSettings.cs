@@ -24,6 +24,7 @@ namespace GSRP.Models
             VideosPath = other.VideosPath;
             IconPlacement = other.IconPlacement;
             IconOffset = other.IconOffset;
+            EnablePeriodicVacCheck = other.EnablePeriodicVacCheck;
         }
 
         public void CopyFrom(AppSettings other)
@@ -42,6 +43,7 @@ namespace GSRP.Models
             VideosPath = other.VideosPath;
             IconPlacement = other.IconPlacement;
             IconOffset = other.IconOffset;
+            EnablePeriodicVacCheck = other.EnablePeriodicVacCheck;
         }
 
         // Window settings
@@ -72,11 +74,10 @@ namespace GSRP.Models
         public string? VideosPath { get; set; } = "";
 
         // API and automation settings
-        [JsonPropertyName("api_key")]
-        public string? ApiKey { get; set; }
+        
 
         [JsonPropertyName("enable_periodic_vac_check")]
-        public bool EnablePeriodicVacCheck { get; set; } = true;
+        public bool EnablePeriodicVacCheck { get; set; } = false;
 
         // Appearance settings
         [JsonPropertyName("icon_corner")]

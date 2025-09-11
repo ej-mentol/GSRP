@@ -146,20 +146,20 @@ namespace GSRP.ViewModels
 
             // Commands
             UpdateSinglePlayerVacStatusCommand = new AsyncRelayCommand<Player?>(UpdateSinglePlayerVacStatusAsync, CanUpdateSinglePlayerVacStatus);
-            UpdatePlayerAliasAsyncCommand = new AsyncRelayCommand<Player?>(UpdatePlayerAliasAsync, CanExecuteOnIdlePlayer);
-            SetPlayerGameColorAsyncCommand = new AsyncRelayCommand<Player?>(p => SetPlayerColorAsync(p, ColorTarget.GameName), CanExecuteOnIdlePlayer);
-            SetPlayerSteamColorAsyncCommand = new AsyncRelayCommand<Player?>(p => SetPlayerColorAsync(p, ColorTarget.SteamName), CanExecuteOnIdlePlayer);
-            SetPlayerAliasColorAsyncCommand = new AsyncRelayCommand<Player?>(SetPlayerAliasColorAsync, CanExecuteOnIdlePlayer);
-            SetPlayerIconAsyncCommand = new AsyncRelayCommand<Tuple<object, object>?>(SetPlayerIconAsync, CanExecuteOnIdlePlayerTuple);
-            CreatePlayerCardImageCommand = new AsyncRelayCommand<Player?>(CreatePlayerCardImageAsync, CanExecuteOnIdlePlayer);
+            UpdatePlayerAliasAsyncCommand = new AsyncRelayCommand<Player?>(UpdatePlayerAliasAsync, CanExecuteOnPlayer);
+            SetPlayerGameColorAsyncCommand = new AsyncRelayCommand<Player?>(p => SetPlayerColorAsync(p, ColorTarget.GameName), CanExecuteOnPlayer);
+            SetPlayerSteamColorAsyncCommand = new AsyncRelayCommand<Player?>(p => SetPlayerColorAsync(p, ColorTarget.SteamName), CanExecuteOnPlayer);
+            SetPlayerAliasColorAsyncCommand = new AsyncRelayCommand<Player?>(SetPlayerAliasColorAsync, CanExecuteOnPlayer);
+            SetPlayerIconAsyncCommand = new AsyncRelayCommand<Tuple<object, object>?>(SetPlayerIconAsync, CanExecuteOnPlayerTuple);
+            CreatePlayerCardImageCommand = new AsyncRelayCommand<Player?>(CreatePlayerCardImageAsync, CanExecuteOnPlayer);
 
             // These commands work with static data and don't need to be disabled during updates
             OpenInBrowserCommand = new RelayCommand<Player?>(OpenInBrowser);
-            CopyPlayerIdCommand = new RelayCommand<Player?>(CopyPlayerId, CanCopyPlayerId);
-            CopyPlayerSteamId2Command = new RelayCommand<Player?>(CopyPlayerSteamId2, CanCopyPlayerSteamId2);
-            CopyPlayerNameCommand = new RelayCommand<Player?>(CopyPlayerName, CanCopyPlayerName);
-            CopyPlayerAliasCommand = new RelayCommand<Player?>(CopyPlayerAlias, CanCopyPlayerAlias);
-            CopyPlayerPersonaNameCommand = new RelayCommand<Player?>(CopyPlayerPersonaName, CanCopyPlayerPersonaName);
+            CopyPlayerIdCommand = new RelayCommand<Player?>(CopyPlayerId);
+            CopyPlayerSteamId2Command = new RelayCommand<Player?>(CopyPlayerSteamId2);
+            CopyPlayerNameCommand = new RelayCommand<Player?>(CopyPlayerName);
+            CopyPlayerAliasCommand = new RelayCommand<Player?>(CopyPlayerAlias);
+            CopyPlayerPersonaNameCommand = new RelayCommand<Player?>(CopyPlayerPersonaName);
             CopyPlayerToReportCommand = new RelayCommand<Player?>(CopyPlayerToReport);
             CopyReportForServerCommand = new RelayCommand<object>(CopyReportForServer);
             
@@ -169,14 +169,9 @@ namespace GSRP.ViewModels
             TestCommand = new RelayCommand(() => _dialogService.ShowMessageDialog("Test", "Command was executed!"));
         }
 
-        private bool CanCopyPlayerId(Player? p) => p != null && !string.IsNullOrEmpty(p.SteamId64);
-        private bool CanCopyPlayerSteamId2(Player? p) => p != null && (!string.IsNullOrEmpty(p.ParsedSteamId2) || !string.IsNullOrEmpty(p.SteamId2));
-        private bool CanCopyPlayerName(Player? p) => p != null && !string.IsNullOrEmpty(p.Name);
-        private bool CanCopyPlayerAlias(Player? p) => p != null && !string.IsNullOrEmpty(p.Alias);
-        private bool CanCopyPlayerPersonaName(Player? p) => p != null && !string.IsNullOrEmpty(p.PersonaName);
-
+        private bool CanExecuteOnPlayer(Player? player) => player != null;
+        private bool CanExecuteOnPlayerTuple(Tuple<object, object>? parameters) => parameters?.Item1 is Player;
         private bool CanExecuteOnIdlePlayer(Player? player) => player != null && !player.IsBusy;
-        private bool CanExecuteOnIdlePlayerTuple(Tuple<object, object>? parameters) => parameters?.Item1 is Player player && !player.IsBusy;
 
         private async Task CreatePlayerCardImageAsync(Player? player)
         {
@@ -385,12 +380,6 @@ namespace GSRP.ViewModels
                     _allPlayers.Add(player);
                 }
                 FilterPlayers(_cts.Token); // Initial filter
-
-                // Обновляем состояние команд копирования после обновления данных
-                ((RelayCommand<Player?>)CopyPlayerIdCommand).NotifyCanExecuteChanged();
-                ((RelayCommand<Player?>)CopyPlayerSteamId2Command).NotifyCanExecuteChanged();
-                ((RelayCommand<Player?>)CopyPlayerNameCommand).NotifyCanExecuteChanged();
-                ((RelayCommand<Player?>)CopyPlayerAliasCommand).NotifyCanExecuteChanged();
             });
         }
 
@@ -398,11 +387,6 @@ namespace GSRP.ViewModels
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                (UpdatePlayerAliasAsyncCommand as IRelayCommand)?.NotifyCanExecuteChanged();
-                (SetPlayerGameColorAsyncCommand as IRelayCommand)?.NotifyCanExecuteChanged();
-                (SetPlayerSteamColorAsyncCommand as IRelayCommand)?.NotifyCanExecuteChanged();
-                (SetPlayerAliasColorAsyncCommand as IRelayCommand)?.NotifyCanExecuteChanged();
-                (SetPlayerIconAsyncCommand as IRelayCommand)?.NotifyCanExecuteChanged();
                 (CreatePlayerCardImageCommand as IRelayCommand)?.NotifyCanExecuteChanged();
                 UpdateSinglePlayerVacStatusCommand.NotifyCanExecuteChanged();
             });
@@ -522,11 +506,58 @@ namespace GSRP.ViewModels
             catch (Exception ex) { _dialogService.ShowMessageDialog("Error", $"Failed to copy {type}: {ex.Message}"); }
         }
 
-        private void CopyPlayerId(Player? player) => CopyToClipboard(player?.SteamId64, "SteamID64");
-        private void CopyPlayerSteamId2(Player? player) => CopyToClipboard(player?.ParsedSteamId2 ?? player?.SteamId2, "SteamID");
-        private void CopyPlayerName(Player? player) => CopyToClipboard(player?.Name, "Name");
-        private void CopyPlayerAlias(Player? player) => CopyToClipboard(player?.Alias, "Alias");
-        private void CopyPlayerPersonaName(Player? player) => CopyToClipboard(player?.PersonaName, "PersonaName");
+        private void CopyPlayerId(Player? player)
+        {
+            if (player == null) return;
+            if (string.IsNullOrEmpty(player.SteamId64))
+            {
+                _dialogService.ShowMessageDialog("Info", "This player does not have a SteamID64 to copy.");
+                return;
+            }
+            CopyToClipboard(player.SteamId64, "SteamID64");
+        }
+
+        private void CopyPlayerSteamId2(Player? player)
+        {
+            if (player == null) return;
+            var steamId2 = player.ParsedSteamId2 ?? player.SteamId2;
+            if (string.IsNullOrEmpty(steamId2))
+            {
+                _dialogService.ShowMessageDialog("Info", "This player does not have a SteamID to copy.");
+                return;
+            }
+            CopyToClipboard(steamId2, "SteamID");
+        }
+        private void CopyPlayerName(Player? player)
+        {
+            if (player == null) return;
+            if (string.IsNullOrEmpty(player.Name))
+            {
+                _dialogService.ShowMessageDialog("Info", "This player does not have a name to copy.");
+                return;
+            }
+            CopyToClipboard(player.Name, "Name");
+        }
+        private void CopyPlayerAlias(Player? player)
+        {
+            if (player == null) return;
+            if (string.IsNullOrEmpty(player.Alias))
+            {
+                _dialogService.ShowMessageDialog("Info", "This player does not have an alias to copy.");
+                return;
+            }
+            CopyToClipboard(player.Alias, "Alias");
+        }
+        private void CopyPlayerPersonaName(Player? player)
+        {
+            if (player == null) return;
+            if (string.IsNullOrEmpty(player.PersonaName))
+            {
+                _dialogService.ShowMessageDialog("Info", "This player does not have a PersonaName to copy.");
+                return;
+            }
+            CopyToClipboard(player.PersonaName, "PersonaName");
+        }
         
         private async Task UpdateSinglePlayerVacStatusAsync(Player? player)
         {
@@ -563,8 +594,7 @@ namespace GSRP.ViewModels
                 player.IsCheckingBans = false;
                 StatusMessage = "Player Database & Reporting";
                 UpdateSinglePlayerVacStatusCommand.NotifyCanExecuteChanged();
-
-                // Обновляем команды копирования для этого игрока
+    
                 ((RelayCommand<Player?>)CopyPlayerIdCommand).NotifyCanExecuteChanged();
                 ((RelayCommand<Player?>)CopyPlayerSteamId2Command).NotifyCanExecuteChanged();
                 ((RelayCommand<Player?>)CopyPlayerNameCommand).NotifyCanExecuteChanged();

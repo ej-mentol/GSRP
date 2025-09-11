@@ -15,10 +15,19 @@ public partial class Player : ObservableObject
     [NotifyPropertyChangedFor(nameof(DisplayNameForUI))]
     private string _name = string.Empty;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasAlias))]
-    [NotifyPropertyChangedFor(nameof(DisplayName))]
     private string _alias = string.Empty;
+    public string Alias
+    {
+        get => _alias;
+        set
+        {
+            if (SetProperty(ref _alias, value))
+            {
+                OnPropertyChanged(nameof(HasAlias));
+                OnPropertyChanged(nameof(DisplayName));
+            }
+        }
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SteamId2))]
@@ -71,7 +80,6 @@ public partial class Player : ObservableObject
     public event Action? IsBusyChanged;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsBusy))]
     private bool _isUpdating;
 
     [ObservableProperty]
@@ -81,13 +89,21 @@ public partial class Player : ObservableObject
     private bool _avatarDownloadFailed;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsBusy))]
     private bool _isCheckingBans;
 
     public bool IsBusy => IsUpdating || IsCheckingBans;
 
-    partial void OnIsUpdatingChanged(bool value) => IsBusyChanged?.Invoke();
-    partial void OnIsCheckingBansChanged(bool value) => IsBusyChanged?.Invoke();
+    partial void OnIsUpdatingChanged(bool value) 
+    {
+        OnPropertyChanged(nameof(IsBusy));
+        IsBusyChanged?.Invoke();
+    }
+
+    partial void OnIsCheckingBansChanged(bool value) 
+    {
+        OnPropertyChanged(nameof(IsBusy));
+        IsBusyChanged?.Invoke();
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ProfileStatusText))]

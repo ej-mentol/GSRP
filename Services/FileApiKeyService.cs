@@ -38,14 +38,12 @@ namespace GSRP.Services
 
                     _cachedKey = Encoding.UTF8.GetString(decryptedBytes);
 
-                    // Очищаем массив из памяти
                     Array.Clear(decryptedBytes, 0, decryptedBytes.Length);
 
                     return _cachedKey;
                 }
                 catch (Exception ex)
-                {
-                    // Логируем ошибку (можно добавить ILogger)
+                {          
                     System.Diagnostics.Debug.WriteLine($"Error reading API key: {ex.Message}");
 
                     TryDeleteKeyFile();
@@ -73,8 +71,7 @@ namespace GSRP.Services
                         _machineEntropy,
                         DataProtectionScope.CurrentUser
                     );
-
-                    // Атомарная запись через File.Replace
+          
                     var tempFile = _keyFilePath + ".tmp";
                     var backupFile = _keyFilePath + ".bak";
 
@@ -83,7 +80,7 @@ namespace GSRP.Services
                     if (File.Exists(_keyFilePath))
                     {
                         File.Replace(tempFile, _keyFilePath, backupFile);
-                        // Удаляем backup файл
+                     
                         if (File.Exists(backupFile))
                             File.Delete(backupFile);
                     }
@@ -91,13 +88,11 @@ namespace GSRP.Services
                     {
                         File.Move(tempFile, _keyFilePath);
                     }
-
-                    // Устанавливаем атрибут "скрытый" для файла
+                  
                     File.SetAttributes(_keyFilePath, FileAttributes.Hidden);
 
                     _cachedKey = apiKey;
 
-                    // Очищаем массивы из памяти
                     Array.Clear(keyBytes, 0, keyBytes.Length);
                     Array.Clear(encryptedBytes, 0, encryptedBytes.Length);
                 }

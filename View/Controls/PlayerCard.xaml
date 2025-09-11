@@ -31,7 +31,8 @@
             Padding="24,18"
             Cursor="Hand"
             Background="#1e1f23"
-            Tag="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=Tag}">
+            Tag="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=Tag}"
+            >
 
         <Border.Effect>
             <DropShadowEffect Color="#000000" Direction="270" ShadowDepth="1" BlurRadius="3" Opacity="0.3"/>
@@ -54,7 +55,7 @@
                     CornerRadius="10"
                     Background="{Binding FallbackAvatarBrush}"
                     Margin="0,0,16,0"
-                    Tag="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl}, Path=DataContext}">
+                    Tag="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=Tag}">
                 <Grid>
                     <ui:ProgressRing IsActive="True"
                                      Width="32" Height="32"

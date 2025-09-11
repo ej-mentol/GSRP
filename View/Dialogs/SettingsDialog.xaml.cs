@@ -60,6 +60,7 @@ namespace GSRP.Views.Dialogs
             UdpSendPortTextBox.Text = _settings.UdpSendPort.ToString();
             UdpSendAddressTextBox.Text = _settings.UdpSendAddress;
             IconOffsetTextBox.Text = _settings.IconOffset.ToString();
+            EnablePeriodicVacCheckCheckBox.IsChecked = _settings.EnablePeriodicVacCheck;
 
             UpdateApiKeyStatus();
         }
@@ -91,6 +92,8 @@ namespace GSRP.Views.Dialogs
             {
                 _settings.IconOffset = 2; // Default value if parsing fails
             }
+
+            _settings.EnablePeriodicVacCheck = EnablePeriodicVacCheckCheckBox.IsChecked ?? false;
 
             // Now, apply the changes from the copy to the actual settings and save.
             _settingsService.CurrentSettings.CopyFrom(_settings);
