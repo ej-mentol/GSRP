@@ -62,6 +62,12 @@ namespace GSRP.Services
 
         private Task EnqueueOperationAsync(Func<Task> operation)
         {
+            if (_operationQueue.Count >= 1000)
+            {
+                System.Diagnostics.Debug.WriteLine("[DatabaseService] Database queue is full. Operation rejected.");
+                return Task.FromException(new InvalidOperationException("Database operation queue is full. Please try again later."));
+            }
+
             var tcs = new TaskCompletionSource<bool>();
             
             _operationQueue.Enqueue(async () =>

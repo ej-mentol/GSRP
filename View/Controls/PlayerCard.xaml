@@ -160,11 +160,11 @@
 
                 <Border.ContextMenu>
                     <ContextMenu Style="{StaticResource ThemedContextMenu}"
-                                 ItemsSource="{Binding PlacementTarget.Tag.AvailableIconInfos, RelativeSource={RelativeSource Self}}">
+                                 ItemsSource="{Binding PlacementTarget.Tag.AvailableIconInfos, RelativeSource={RelativeSource Self}, FallbackValue={x:Null}}">
                         <ContextMenu.ItemContainerStyle>
                             <Style TargetType="MenuItem" BasedOn="{StaticResource ThemedMenuItem}">
                                 <Setter Property="Header" Value="{Binding Name}"/>
-                                <Setter Property="Command" Value="{Binding Path=PlacementTarget.Tag.SetPlayerIconAsyncCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                <Setter Property="Command" Value="{Binding Path=PlacementTarget.Tag.SetPlayerIconAsyncCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}, FallbackValue={x:Null}}"/>
                                 <Setter Property="CommandParameter">
                                     <Setter.Value>
                                         <MultiBinding Converter="{StaticResource TupleConverter}">

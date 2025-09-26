@@ -9,12 +9,12 @@ namespace GSRP.Services
 {
     public class ScreenshotService : IScreenshotService
     {
-        public Task CreateAndCopyToClipboardAsync(Player player)
+        public async Task CreateAndCopyToClipboardAsync(Player player)
         {
-            if (player == null) return Task.CompletedTask;
+            if (player == null) return;
 
-            // We need to create the control on the UI thread.
-            Application.Current.Dispatcher.Invoke(() =>
+            // We need to create and render the control on the UI thread.
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 var card = new ShareablePlayerCard
                 {
@@ -39,12 +39,11 @@ namespace GSRP.Services
                     PixelFormats.Pbgra32);
 
                 renderTargetBitmap.Render(card);
+                renderTargetBitmap.Freeze(); // Freeze for performance and to allow cross-thread access if needed later
 
                 // Copy the bitmap to the clipboard.
                 Clipboard.SetImage(renderTargetBitmap);
             });
-
-            return Task.CompletedTask;
         }
     }
 }

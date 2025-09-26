@@ -49,7 +49,7 @@ namespace GSRP.ViewModels
         private string _searchText = string.Empty;
 
         [ObservableProperty]
-        private string _selectedTab = "Players";
+        private string _selectedTab = TabNames.Players;
 
         [ObservableProperty]
         private bool _isMonitoring;
@@ -230,7 +230,7 @@ namespace GSRP.ViewModels
         [RelayCommand]
         private void SelectTab(string? tabName)
         {
-            SelectedTab = tabName ?? "Players";
+            SelectedTab = tabName ?? TabNames.Players;
         }
 
         private void OpenInBrowser(Player? player)
@@ -308,7 +308,7 @@ namespace GSRP.ViewModels
             if (player == null) return;
             ReportNickname = player.Name;
             ReportSteamId = player.SteamId2;
-            SelectedTab = "Report";
+            SelectedTab = TabNames.Report;
         }
 
         [RelayCommand]
@@ -463,6 +463,7 @@ namespace GSRP.ViewModels
                 _udpConsoleService.StartListening(newSettings.UdpListenPort);
             }
             OnPropertyChanged(nameof(CurrentSettings));
+            UpdateSinglePlayerVacStatusCommand.NotifyCanExecuteChanged();
         }
 
         private void ToggleConsoleConnectionInternal()

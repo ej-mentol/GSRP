@@ -108,22 +108,22 @@
                                      Style="{StaticResource {x:Type TextBox}}"
                                      shell:WindowChrome.IsHitTestVisibleInChrome="True">
                                 <TextBox.ContextMenu>
-                                    <ContextMenu Style="{StaticResource ThemedContextMenu}">
-                                        <MenuItem Command="ApplicationCommands.Cut" Header="Cut" Style="{StaticResource ThemedMenuItem}">
+                                    <ContextMenu x:Name="SearchBoxContextMenu" Opened="SearchBoxContextMenu_Opened" Style="{StaticResource ThemedContextMenu}">
+                                        <MenuItem x:Name="CutMenuItem" Click="CutMenuItem_Click" Header="Cut" Style="{StaticResource ThemedMenuItem}">
                                             <MenuItem.Icon>
                                                 <Border Background="#ef4444" CornerRadius="3" Width="16" Height="16">
                                                     <TextBlock Text="✂️" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                             </MenuItem.Icon>
                                         </MenuItem>
-                                        <MenuItem Command="ApplicationCommands.Copy" Header="Copy" Style="{StaticResource ThemedMenuItem}">
+                                        <MenuItem x:Name="CopyMenuItem" Click="CopyMenuItem_Click" Header="Copy" Style="{StaticResource ThemedMenuItem}">
                                             <MenuItem.Icon>
                                                 <Border Background="#3b82f6" CornerRadius="3" Width="16" Height="16">
                                                     <TextBlock Text="📋" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                             </MenuItem.Icon>
                                         </MenuItem>
-                                        <MenuItem Command="ApplicationCommands.Paste" Header="Paste" Style="{StaticResource ThemedMenuItem}">
+                                        <MenuItem x:Name="PasteMenuItem" Click="PasteMenuItem_Click" Header="Paste" Style="{StaticResource ThemedMenuItem}">
                                             <MenuItem.Icon>
                                                 <Border Background="#10b981" CornerRadius="3" Width="16" Height="16">
                                                     <TextBlock Text="📄" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -131,14 +131,14 @@
                                             </MenuItem.Icon>
                                         </MenuItem>
                                         <Separator/>
-                                        <MenuItem Command="ApplicationCommands.SelectAll" Header="Select All" Style="{StaticResource ThemedMenuItem}">
+                                        <MenuItem x:Name="SelectAllMenuItem" Click="SelectAllMenuItem_Click" Header="Select All" Style="{StaticResource ThemedMenuItem}">
                                             <MenuItem.Icon>
                                                 <Border Background="#60a5fa" CornerRadius="3" Width="16" Height="16">
                                                     <ui:FontIcon Glyph="&#xE8B3;" FontSize="10"  HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                             </MenuItem.Icon>
                                         </MenuItem>
-                                        <MenuItem Command="ApplicationCommands.Delete" Header="Delete" Style="{StaticResource ThemedMenuItem}">
+                                        <MenuItem x:Name="DeleteMenuItem" Click="DeleteMenuItem_Click" Header="Delete" Style="{StaticResource ThemedMenuItem}">
                                             <MenuItem.Icon>
                                                 <Border Background="#ef4444" CornerRadius="3" Width="16" Height="16">
                                                     <ui:FontIcon Glyph="&#xE74D;" FontSize="10"  HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -223,7 +223,7 @@
                                 <Button Name="MaximizeButton" 
                                         Style="{StaticResource WindowControlButton}" 
                                         Click="MaximizeButton_Click">
-                                    <TextBlock Text="□" Foreground="#a6a8ab" FontSize="12"/>
+                                    <TextBlock x:Name="MaximizeIcon" Text="🗖" Foreground="#a6a8ab" FontSize="12"/>
                                 </Button>
                                 <Button Name="CloseButton" 
                                         Style="{StaticResource CloseButton}" 
@@ -240,11 +240,11 @@
                     <StackPanel Orientation="Horizontal">
                         <Button Content="{Binding PlayersTabHeader}" 
                                 Command="{Binding SelectTabCommand}" 
-                                CommandParameter="Players">
+                                CommandParameter="{x:Static vm:TabNames.Players}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource TabButton}">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedTab}" Value="Players">
+                                        <DataTrigger Binding="{Binding SelectedTab}" Value="{x:Static vm:TabNames.Players}">
                                             <Setter Property="Background" Value="#1e1f23"/>
                                             <Setter Property="Foreground" Value="#3b82f6"/>
                                             <Setter Property="BorderBrush" Value="#3b82f6"/>
@@ -255,11 +255,11 @@
                         </Button>
                         <Button Content="Report" 
                                 Command="{Binding SelectTabCommand}" 
-                                CommandParameter="Report">
+                                CommandParameter="{x:Static vm:TabNames.Report}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource TabButton}">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedTab}" Value="Report">
+                                        <DataTrigger Binding="{Binding SelectedTab}" Value="{x:Static vm:TabNames.Report}">
                                             <Setter Property="Background" Value="#1e1f23"/>
                                             <Setter Property="Foreground" Value="#3b82f6"/>
                                             <Setter Property="BorderBrush" Value="#3b82f6"/>
@@ -270,11 +270,11 @@
                         </Button>
                         <Button Content="Console" 
                                 Command="{Binding SelectTabCommand}" 
-                                CommandParameter="Console">
+                                CommandParameter="{x:Static vm:TabNames.Console}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource TabButton}">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedTab}" Value="Console">
+                                        <DataTrigger Binding="{Binding SelectedTab}" Value="{x:Static vm:TabNames.Console}">
                                             <Setter Property="Background" Value="#1e1f23"/>
                                             <Setter Property="Foreground" Value="#3b82f6"/>
                                             <Setter Property="BorderBrush" Value="#3b82f6"/>
@@ -285,11 +285,11 @@
                         </Button>
                         <Button Content="DB Search" 
                                 Command="{Binding SelectTabCommand}" 
-                                CommandParameter="DbSearch">
+                                CommandParameter="{x:Static vm:TabNames.DbSearch}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource TabButton}">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedTab}" Value="DbSearch">
+                                        <DataTrigger Binding="{Binding SelectedTab}" Value="{x:Static vm:TabNames.DbSearch}">
                                             <Setter Property="Background" Value="#1e1f23"/>
                                             <Setter Property="Foreground" Value="#3b82f6"/>
                                             <Setter Property="BorderBrush" Value="#3b82f6"/>
@@ -303,10 +303,10 @@
 
                 <!-- Content Area -->
                 <Grid Grid.Row="2">
-                    <view:PlayersView Visibility="{Binding SelectedTab, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter=Players}" />
-                    <view:ReportView Visibility="{Binding SelectedTab, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter=Report}" />
-                    <view:ConsoleView Visibility="{Binding SelectedTab, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter=Console}" />
-                    <view:DatabaseSearchView Visibility="{Binding SelectedTab, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter=DbSearch}" />
+                    <view:PlayersView Visibility="{Binding SelectedTab, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:TabNames.Players}}" />
+                    <view:ReportView Visibility="{Binding SelectedTab, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:TabNames.Report}}" />
+                    <view:ConsoleView Visibility="{Binding SelectedTab, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:TabNames.Console}}" />
+                    <view:DatabaseSearchView Visibility="{Binding SelectedTab, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:TabNames.DbSearch}}" />
                 </Grid>
             </Grid>
         </Border>

@@ -37,11 +37,21 @@ public partial class Player : ObservableObject
 
     public string DisplaySteamId2 => ParsedSteamId2 ?? SteamId2;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasPersonaName))]
-    [NotifyPropertyChangedFor(nameof(DetailText))]
-    [NotifyPropertyChangedFor(nameof(DisplayPersonaName))]
     private string _personaName = string.Empty;
+
+    public string PersonaName
+    {
+        get => _personaName;
+        set
+        {
+            if (SetProperty(ref _personaName, value))
+            {
+                OnPropertyChanged(nameof(HasPersonaName));
+                OnPropertyChanged(nameof(DetailText));
+                OnPropertyChanged(nameof(DisplayPersonaName));
+            }
+        }
+    }
 
     [ObservableProperty]
     private string _avatarHash = string.Empty;

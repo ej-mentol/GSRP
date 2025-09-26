@@ -145,7 +145,7 @@ namespace GSRP.Services
                     if (!response.IsSuccessStatusCode)
                     {
                         System.Diagnostics.Debug.WriteLine($"Steam API (GetPlayerBans) returned an error: {response.ReasonPhrase}");
-                        continue; // Continue to next batch
+                        return null;
                     }
 
                     var json = await response.Content.ReadAsStringAsync(cancellationToken);

@@ -47,11 +47,11 @@ namespace GSRP.Services
 
         public async Task ProcessClipboardDataAsync(string clipboardText, IProgress<string> progress)
         {
-            var oldCts = _clipboardCts;
-            _clipboardCts = new CancellationTokenSource();
+            var newCts = new CancellationTokenSource();
+            var oldCts = Interlocked.Exchange(ref _clipboardCts, newCts);
             oldCts.Cancel();
             oldCts.Dispose();
-            var token = _clipboardCts.Token;
+            var token = newCts.Token;
 
             progress?.Report("Parsing player list...");
             var parsedPlayers = _playerListParser.ParsePlayers(clipboardText);
@@ -140,7 +140,12 @@ namespace GSRP.Services
                 var summaryResult = await summaryTask;
                 var bansResult = await bansTask;
 
-                if (summaryResult?.Data.TryGetValue(player.SteamId64, out var summary) == true)
+                if (!summaryResult.Success)
+                {
+                    throw new Exception(summaryResult.ErrorMessage);
+                }
+
+                if (summaryResult.Data.TryGetValue(player.SteamId64, out var summary))
                 {
                     ApplySummaryDataToPlayer(player, summary);
                     try { await UpdatePlayerSummaryInDb(player, token); }
@@ -165,10 +170,7 @@ namespace GSRP.Services
             catch (OperationCanceledException)
             {
                 System.Diagnostics.Debug.WriteLine($"[EnrichSinglePlayer] Operation was cancelled.");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[Enrichment] Error: {ex.Message}");
+                // Do not rethrow cancellation exceptions as they are not user-facing errors
             }
             finally
             {
