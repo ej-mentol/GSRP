@@ -706,19 +706,22 @@ namespace GSRP.Services
             }
         }
 
-        private void ApplySummaryDataToPlayer(Player player, PlayerData summary)
-        {
-            Application.Current.Dispatcher.Invoke(() =>
+            private void ApplySummaryDataToPlayer(Player player, PlayerData summary)
             {
-                player.ProfileStatus = summary.IsPrivate ? ProfileStatus.Private : ProfileStatus.Public;
-                player.PersonaName = summary.PersonaName;
-                player.TimeCreated = summary.TimeCreated;
-                player.AvatarHash = summary.AvatarHash;
-                player.AvatarPath = GetAvatarPath(player.AvatarHash);
-                player.IsAvatarCached = !string.IsNullOrEmpty(player.AvatarPath);
-            });
-        }
-
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    player.ProfileStatus = summary.IsPrivate ? ProfileStatus.Private : ProfileStatus.Public;
+                    player.PersonaName = summary.PersonaName;
+                    // Only update TimeCreated if it's not already set.
+                    if (player.TimeCreated == 0 && summary.TimeCreated > 0)
+                    {
+                        player.TimeCreated = summary.TimeCreated;
+                    }
+                    player.AvatarHash = summary.AvatarHash;
+                    player.AvatarPath = GetAvatarPath(player.AvatarHash);
+                    player.IsAvatarCached = !string.IsNullOrEmpty(player.AvatarPath);
+                });
+            }
         private void ApplyBanDataToPlayer(Player player, PlayerBanData banData)
         {
             Application.Current.Dispatcher.Invoke(() =>

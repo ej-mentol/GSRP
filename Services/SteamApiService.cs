@@ -160,6 +160,11 @@ namespace GSRP.Services
                     System.Diagnostics.Debug.WriteLine($"Steam API (GetPlayerBans) batch error: {ex.Message}");
                     // Continue to next batch
                 }
+
+                if (i + batchSize < players.Count)
+                {
+                    await Task.Delay(1000, cancellationToken);
+                }
             }
 
             return allBans;
