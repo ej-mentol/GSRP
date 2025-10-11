@@ -9,7 +9,18 @@ namespace GSRP.Services
         public void ApplyMigrations(SqliteConnection connection)
         {
             AddAliasColorColumn(connection);
+            AddGameBansColumn(connection);
             // Future migrations will be called here
+        }
+
+        private void AddGameBansColumn(SqliteConnection connection)
+        {
+            if (!ColumnExists(connection, "players", "number_of_game_bans"))
+            {
+                var command = connection.CreateCommand();
+                command.CommandText = "ALTER TABLE players ADD COLUMN number_of_game_bans INTEGER NOT NULL DEFAULT 0;";
+                command.ExecuteNonQuery();
+            }
         }
 
         private void AddAliasColorColumn(SqliteConnection connection)

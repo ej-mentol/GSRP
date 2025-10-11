@@ -120,28 +120,34 @@ public partial class Player : ObservableObject
     [NotifyPropertyChangedFor(nameof(RegistrationStatusDisplay))]
     private ProfileStatus _profileStatus = ProfileStatus.Unknown;
 
-    public bool IsVacBanned => NumberOfVacBans > 0;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsClean))]
+    [NotifyPropertyChangedFor(nameof(IsVacBanned))]
+    private int _numberOfVacBans;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsClean))]
+    [NotifyPropertyChangedFor(nameof(IsGameBanned))]
+    private int _numberOfGameBans;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsClean))]
     private bool _isCommunityBanned;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsVacBanned))]
     [NotifyPropertyChangedFor(nameof(IsClean))]
-    private int _numberOfVacBans;
-
-    [ObservableProperty]
-    private long _lastVacCheck;
-
-    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasEconomyBan))]
-    [NotifyPropertyChangedFor(nameof(IsClean))]
-    private string _economyBan = string.Empty;
+    private string _economyBan = "none";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DaysSinceLastBan))]
     private long _banDate;
+
+    [ObservableProperty]
+    private long _lastVacCheck;
+
+    public bool IsVacBanned => NumberOfVacBans > 0;
+    public bool IsGameBanned => NumberOfGameBans > 0;
 
     private long _lastUpdatedBackingField;
 
@@ -258,7 +264,7 @@ public partial class Player : ObservableObject
     public bool HasAlias => !string.IsNullOrEmpty(Alias);
     public bool HasPersonaName => !string.IsNullOrEmpty(PersonaName);
     public bool HasEconomyBan => !string.IsNullOrEmpty(EconomyBan) && !EconomyBan.Equals("none", StringComparison.OrdinalIgnoreCase);
-    public bool IsClean => !IsVacBanned && !IsCommunityBanned && !HasEconomyBan;
+    public bool IsClean => !IsVacBanned && !IsGameBanned && !IsCommunityBanned && !HasEconomyBan;
 
     public string ProfileStatusText => ProfileStatus switch
     {
@@ -388,6 +394,7 @@ public partial class Player : ObservableObject
         _profileStatus = other._profileStatus;
         _isCommunityBanned = other._isCommunityBanned;
         _numberOfVacBans = other._numberOfVacBans;
+        _numberOfGameBans = other._numberOfGameBans;
         _lastVacCheck = other._lastVacCheck;
         _economyBan = other._economyBan;
         _banDate = other._banDate;

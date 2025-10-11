@@ -133,7 +133,7 @@ namespace GSRP.Services
                 return result;
             }
 
-            var sql = new StringBuilder("SELECT steam_id64, alias, txt_color, stm_color, avatarhash, timecreated, personaname, last_updated, iconname, profile_status, is_community_banned, number_of_vac_bans, last_vac_check, economy_ban, ban_date, alias_color FROM players WHERE steam_id64 IN (");
+            var sql = new StringBuilder("SELECT steam_id64, alias, txt_color, stm_color, avatarhash, timecreated, personaname, last_updated, iconname, profile_status, is_community_banned, number_of_vac_bans, number_of_game_bans, last_vac_check, economy_ban, ban_date, alias_color FROM players WHERE steam_id64 IN (");
             var parameters = new List<SqliteParameter>();
             for (int i = 0; i < idList.Count; i++)
             {
@@ -165,10 +165,11 @@ namespace GSRP.Services
                     ProfileStatus: reader.IsDBNull(9) ? ProfileStatus.Unknown : (ProfileStatus)reader.GetInt32(9),
                     IsCommunityBanned: reader.IsDBNull(10) ? false : reader.GetBoolean(10),
                     NumberOfVacBans: reader.IsDBNull(11) ? 0 : reader.GetInt32(11),
-                    LastVacCheck: reader.IsDBNull(12) ? 0 : reader.GetInt64(12),
-                    EconomyBan: reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
-                    BanDate: reader.IsDBNull(14) ? 0 : reader.GetInt64(14),
-                    AliasColor: ConvertToColor(reader.IsDBNull(15) ? 0 : reader.GetInt64(15))
+                    NumberOfGameBans: reader.IsDBNull(12) ? 0 : reader.GetInt32(12),
+                    LastVacCheck: reader.IsDBNull(13) ? 0 : reader.GetInt64(13),
+                    EconomyBan: reader.IsDBNull(14) ? string.Empty : reader.GetString(14),
+                    BanDate: reader.IsDBNull(15) ? 0 : reader.GetInt64(15),
+                    AliasColor: ConvertToColor(reader.IsDBNull(16) ? 0 : reader.GetInt64(16))
                 );
             }
 
@@ -211,7 +212,7 @@ namespace GSRP.Services
 
             var whereClause = string.Join(" OR ", conditions);
             var sql = @$"
-                SELECT steam_id64, alias, txt_color, stm_color, avatarhash, timecreated, personaname, last_updated, iconname, profile_status, is_community_banned, number_of_vac_bans, last_vac_check, economy_ban, ban_date, alias_color
+                SELECT steam_id64, alias, txt_color, stm_color, avatarhash, timecreated, personaname, last_updated, iconname, profile_status, is_community_banned, number_of_vac_bans, number_of_game_bans, last_vac_check, economy_ban, ban_date, alias_color
                 FROM players
                 WHERE {whereClause};";
 
@@ -236,10 +237,11 @@ namespace GSRP.Services
                     ProfileStatus: reader.IsDBNull(9) ? ProfileStatus.Unknown : (ProfileStatus)reader.GetInt32(9),
                     IsCommunityBanned: reader.IsDBNull(10) ? false : reader.GetBoolean(10),
                     NumberOfVacBans: reader.IsDBNull(11) ? 0 : reader.GetInt32(11),
-                    LastVacCheck: reader.IsDBNull(12) ? 0 : reader.GetInt64(12),
-                    EconomyBan: reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
-                    BanDate: reader.IsDBNull(14) ? 0 : reader.GetInt64(14),
-                    AliasColor: ConvertToColor(reader.IsDBNull(15) ? 0 : reader.GetInt64(15))
+                    NumberOfGameBans: reader.IsDBNull(12) ? 0 : reader.GetInt32(12),
+                    LastVacCheck: reader.IsDBNull(13) ? 0 : reader.GetInt64(13),
+                    EconomyBan: reader.IsDBNull(14) ? string.Empty : reader.GetString(14),
+                    BanDate: reader.IsDBNull(15) ? 0 : reader.GetInt64(15),
+                    AliasColor: ConvertToColor(reader.IsDBNull(16) ? 0 : reader.GetInt64(16))
                 );
                 results.Add(new PlayerSearchResult(steamId, dbData));
             }
@@ -319,15 +321,16 @@ namespace GSRP.Services
         public Task SetProfileStatusAsync(long steamId64, ProfileStatus profileStatus) => UpsertPlayerFieldAsync(steamId64, "profile_status", (int)profileStatus);
         public Task SetLastUpdatedAsync(long steamId64, long timestamp) => UpsertPlayerFieldAsync(steamId64, "last_updated", timestamp);
 
-        public Task UpdatePlayerBanStatusAsync(long steamId64, bool isCommunityBanned, string economyBan, int numberOfVacBans, long banDate, long lastVacCheck)
+        public Task UpdatePlayerBanStatusAsync(long steamId64, bool isCommunityBanned, string economyBan, int numberOfVacBans, int numberOfGameBans, long banDate, long lastVacCheck)
         {
             var sql = $@"
-                INSERT INTO players (steam_id64, is_community_banned, economy_ban, number_of_vac_bans, ban_date, last_vac_check, last_updated) 
-                VALUES (@steamId, @isCommunityBanned, @economyBan, @numberOfVacBans, @banDate, @lastVacCheck, @lastUpdated)
+                INSERT INTO players (steam_id64, is_community_banned, economy_ban, number_of_vac_bans, number_of_game_bans, ban_date, last_vac_check, last_updated) 
+                VALUES (@steamId, @isCommunityBanned, @economyBan, @numberOfVacBans, @numberOfGameBans, @banDate, @lastVacCheck, @lastUpdated)
                 ON CONFLICT(steam_id64) DO UPDATE SET 
                     is_community_banned = excluded.is_community_banned,
                     economy_ban = excluded.economy_ban,
                     number_of_vac_bans = excluded.number_of_vac_bans,
+                    number_of_game_bans = excluded.number_of_game_bans,
                     ban_date = excluded.ban_date,
                     last_vac_check = excluded.last_vac_check,
                     last_updated = @lastUpdated;";
@@ -337,6 +340,7 @@ namespace GSRP.Services
                 new SqliteParameter("@isCommunityBanned", isCommunityBanned ? 1 : 0),
                 new SqliteParameter("@economyBan", economyBan),
                 new SqliteParameter("@numberOfVacBans", numberOfVacBans),
+                new SqliteParameter("@numberOfGameBans", numberOfGameBans),
                 new SqliteParameter("@banDate", banDate),
                 new SqliteParameter("@lastVacCheck", lastVacCheck),
                 new SqliteParameter("@lastUpdated", DateTimeOffset.Now.ToUnixTimeSeconds())));

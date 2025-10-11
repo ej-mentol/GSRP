@@ -271,6 +271,7 @@
                                                 <MultiBinding Converter="{StaticResource BanTooltipConverter}">
                                                     <Binding Path="BanDate"/>
                                                     <Binding Path="NumberOfVacBans"/>
+                                                    <Binding Path="NumberOfGameBans"/>
                                                     <Binding Path="IsCommunityBanned"/>
                                                     <Binding Path="EconomyBan"/>
                                                 </MultiBinding>
@@ -280,6 +281,7 @@
                                 </ToolTip>
                             </StackPanel.ToolTip>
                             <ui:FontIcon Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" Foreground="#ef4444" FontSize="14" Visibility="{Binding IsVacBanned, Converter={StaticResource BoolToVis}}" Margin="0,0,4,0"/>
+                            <ui:FontIcon Glyph="&#xE730;" FontFamily="Segoe MDL2 Assets" Foreground="#ef4444" FontSize="14" Visibility="{Binding IsGameBanned, Converter={StaticResource BoolToVis}}" Margin="0,0,4,0"/>
                             <ui:FontIcon Glyph="&#xE716;" FontFamily="Segoe MDL2 Assets" Foreground="#ef4444" FontSize="14" Visibility="{Binding IsCommunityBanned, Converter={StaticResource BoolToVis}}" Margin="0,0,4,0"/>
                             <ui:FontIcon Glyph="&#xE7BF;" FontFamily="Segoe MDL2 Assets" Foreground="#ef4444" FontSize="14" Visibility="{Binding EconomyBan, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}, ConverterParameter='none'}"/>
                         </StackPanel>

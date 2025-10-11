@@ -11,7 +11,7 @@ namespace GSRP.Converters
     {
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
-            if (values == null || values.Length < 4)
+            if (values == null || values.Length < 5)
                 return string.Empty;
 
             if (values.Any(v => v == DependencyProperty.UnsetValue))
@@ -21,10 +21,11 @@ namespace GSRP.Converters
 
             var banDate = System.Convert.ToInt64(values[0]);
             var numberOfVACBans = System.Convert.ToInt32(values[1]);
-            var isCommunityBanned = System.Convert.ToBoolean(values[2]);
-            var economyBan = values[3] as string;
+            var numberOfGameBans = System.Convert.ToInt32(values[2]);
+            var isCommunityBanned = System.Convert.ToBoolean(values[3]);
+            var economyBan = values[4] as string;
 
-            bool hasAnyBan = numberOfVACBans > 0 || isCommunityBanned || (!string.IsNullOrEmpty(economyBan) && economyBan != "none");
+            bool hasAnyBan = numberOfVACBans > 0 || numberOfGameBans > 0 || isCommunityBanned || (!string.IsNullOrEmpty(economyBan) && economyBan != "none");
 
             if (!hasAnyBan)
             {
@@ -39,14 +40,19 @@ namespace GSRP.Converters
                 var daysSince = (DateTimeOffset.UtcNow - banDateTime).Days;
                 sb.AppendLine($"Days since last ban: {daysSince}");
             }
-            else if (numberOfVACBans > 0 && banDate == 0)
+            else if ((numberOfVACBans > 0 || numberOfGameBans > 0) && banDate == 0)
             {
-                sb.AppendLine("Please update VAC status");
+                sb.AppendLine("Please update ban status");
             }
 
             if (numberOfVACBans > 0)
             {
                 sb.AppendLine($"Number of VAC bans: {numberOfVACBans}");
+            }
+
+            if (numberOfGameBans > 0)
+            {
+                sb.AppendLine($"Game bans on record: {numberOfGameBans}");
             }
 
             if (isCommunityBanned)

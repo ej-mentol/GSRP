@@ -17,6 +17,7 @@ namespace GSRP.Services
         ProfileStatus ProfileStatus,
         bool IsCommunityBanned,
         int NumberOfVacBans,
+        int NumberOfGameBans,
         long LastVacCheck,
         string EconomyBan,
         long BanDate,
@@ -44,6 +45,6 @@ namespace GSRP.Services
         Task SetPersonaNameAsync(long steamId64, string personaName);
         Task SetProfileStatusAsync(long steamId64, ProfileStatus profileStatus);
         Task SetLastUpdatedAsync(long steamId64, long timestamp);
-        Task UpdatePlayerBanStatusAsync(long steamId64, bool isCommunityBanned, string economyBan, int numberOfVacBans, long banDate, long lastVacCheck);
+        Task UpdatePlayerBanStatusAsync(long steamId64, bool isCommunityBanned, string economyBan, int numberOfVacBans, int numberOfGameBans, long banDate, long lastVacCheck);
     }
 }

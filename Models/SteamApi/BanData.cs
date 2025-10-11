@@ -17,6 +17,9 @@ namespace GSRP.Models.SteamApi
         [JsonPropertyName("NumberOfVACBans")]
         public int NumberOfVACBans { get; init; }
 
+        [JsonPropertyName("NumberOfGameBans")]
+        public int NumberOfGameBans { get; init; }
+
         [JsonPropertyName("DaysSinceLastBan")]
         public int DaysSinceLastBan { get; init; }
 

@@ -78,6 +78,7 @@ namespace GSRP.Services
                     player.ProfileStatus = data.ProfileStatus;
                     player.IsCommunityBanned = data.IsCommunityBanned;
                     player.NumberOfVacBans = data.NumberOfVacBans;
+                    player.NumberOfGameBans = data.NumberOfGameBans;
                     player.LastVacCheck = data.LastVacCheck;
                     player.EconomyBan = data.EconomyBan;
                     player.BanDate = data.BanDate;
@@ -403,7 +404,7 @@ namespace GSRP.Services
         private Task UpdatePlayerBansInDb(Player player)
         {
             if (!long.TryParse(player.SteamId64, out var steamId64)) return Task.CompletedTask;
-            return _database.UpdatePlayerBanStatusAsync(steamId64, player.IsCommunityBanned, player.EconomyBan, player.NumberOfVacBans, player.BanDate, player.LastVacCheck);
+            return _database.UpdatePlayerBanStatusAsync(steamId64, player.IsCommunityBanned, player.EconomyBan, player.NumberOfVacBans, player.NumberOfGameBans, player.BanDate, player.LastVacCheck);
         }
 
         private void NotifyPlayersUpdated()
@@ -729,6 +730,7 @@ namespace GSRP.Services
                 player.IsCommunityBanned = banData.CommunityBanned;
                 player.EconomyBan = banData.EconomyBan;
                 player.NumberOfVacBans = banData.NumberOfVACBans;
+                player.NumberOfGameBans = banData.NumberOfGameBans;
                 long banDate = (banData.DaysSinceLastBan > 0)
                     ? DateTimeOffset.Now.ToUnixTimeSeconds() - (banData.DaysSinceLastBan * 86400L)
                     : 0;
@@ -780,6 +782,7 @@ namespace GSRP.Services
                     IconPath = _iconService.ResolveIconPath(result.Data.IconName) ?? string.Empty,
                     IsCommunityBanned = result.Data.IsCommunityBanned,
                     NumberOfVacBans = result.Data.NumberOfVacBans,
+                    NumberOfGameBans = result.Data.NumberOfGameBans,
                     LastVacCheck = result.Data.LastVacCheck,
                     EconomyBan = result.Data.EconomyBan,
                     BanDate = result.Data.BanDate,

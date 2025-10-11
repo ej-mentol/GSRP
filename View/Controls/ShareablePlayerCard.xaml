@@ -138,28 +138,21 @@
                         <TextBlock Text="CLEAN"/>
                     </Border>
 
-                    <StackPanel Orientation="Horizontal">
-                        <StackPanel.Style>
-                            <Style TargetType="StackPanel">
-                                <Setter Property="Visibility" Value="Visible"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsClean}" Value="True">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </StackPanel.Style>
+                    <Border Background="#ef4444" Visibility="{Binding IsVacBanned, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="VAC" Foreground="White"/>
+                    </Border>
 
-                        <Border Background="#991b1b" Visibility="{Binding IsVacBanned, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="{Binding NumberOfVacBans, StringFormat={}{0} VAC BAN(S)}"/>
-                        </Border>
-                        <Border Background="#991b1b" Visibility="{Binding IsCommunityBanned, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="COMMUNITY BAN"/>
-                        </Border>
-                        <Border Background="#854d0e" Visibility="{Binding HasEconomyBan, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="{Binding EconomyBan, FallbackValue=TRADE BAN}"/>
-                        </Border>
-                    </StackPanel>
+                    <Border Background="#ef4444" Visibility="{Binding IsGameBanned, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="GAME" Foreground="White"/>
+                    </Border>
+
+                    <Border Background="#ef4444" Visibility="{Binding IsCommunityBanned, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="COMMUNITY" Foreground="White"/>
+                    </Border>
+
+                    <Border Background="#854d0e" Visibility="{Binding HasEconomyBan, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding EconomyBan, FallbackValue=TRADE BAN}"/>
+                    </Border>
                 </WrapPanel>
             </StackPanel>
 
