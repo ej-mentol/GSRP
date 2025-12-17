@@ -11,6 +11,9 @@
 
   <ItemGroup>
     <Content Include="icon.ico" />
+    <Compile Remove="Tests\**" />
+    <EmbeddedResource Remove="Tests\**" />
+    <None Remove="Tests\**" />
   </ItemGroup>
 
   <ItemGroup>

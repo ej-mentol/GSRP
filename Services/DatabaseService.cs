@@ -92,6 +92,12 @@ namespace GSRP.Services
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
 
+            // Enable WAL mode for better concurrency
+            using (var walCommand = new SqliteCommand("PRAGMA journal_mode=WAL;", connection))
+            {
+                walCommand.ExecuteNonQuery();
+            }
+
             _migrationService.ApplyMigrations(connection);
 
             var createTableSql = @"
@@ -118,9 +124,21 @@ namespace GSRP.Services
                 command.ExecuteNonQuery();
             }
 
+            // Note: steam_id64 already has index via PRIMARY KEY, this is redundant but harmless
             using (var indexCommand = new SqliteCommand("CREATE INDEX IF NOT EXISTS idx_steam_id64 ON players(steam_id64);", connection))
             {
                 indexCommand.ExecuteNonQuery();
+            }
+
+            // Indices for search performance
+            using (var aliasIndexCommand = new SqliteCommand("CREATE INDEX IF NOT EXISTS idx_alias ON players(alias);", connection))
+            {
+                aliasIndexCommand.ExecuteNonQuery();
+            }
+
+            using (var personaNameIndexCommand = new SqliteCommand("CREATE INDEX IF NOT EXISTS idx_personaname ON players(personaname);", connection))
+            {
+                personaNameIndexCommand.ExecuteNonQuery();
             }
         }
 

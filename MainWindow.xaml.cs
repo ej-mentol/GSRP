@@ -1,18 +1,74 @@
 using System;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Shell;
 using System.Windows.Input;
+using GSRP.Services;
 
 namespace GSRP
 {
     public partial class MainWindow : Window
     {
-        public MainWindow(ViewModels.MainViewModel viewModel)
+        private readonly ISettingsService _settingsService;
+
+        public MainWindow(ViewModels.MainViewModel viewModel, ISettingsService settingsService)
         {
             InitializeComponent();
             DataContext = viewModel;
-            StateChanged += MainWindow_StateChanged;
+            _settingsService = settingsService;
+
+            this.StateChanged += MainWindow_StateChanged;
+            this.Closing += MainWindow_Closing;
+
+            this.Height = _settingsService.CurrentSettings.WindowHeight;
+            this.Width = _settingsService.CurrentSettings.WindowWidth;
+
+            // Ensure the window is not positioned off-screen.
+            var virtualScreenLeft = SystemParameters.VirtualScreenLeft;
+            var virtualScreenTop = SystemParameters.VirtualScreenTop;
+            var virtualScreenWidth = SystemParameters.VirtualScreenWidth;
+            var virtualScreenHeight = SystemParameters.VirtualScreenHeight;
+
+            var windowX = _settingsService.CurrentSettings.WindowX;
+            var windowY = _settingsService.CurrentSettings.WindowY;
+
+            if (windowX < virtualScreenLeft || windowX > virtualScreenLeft + virtualScreenWidth - this.Width)
+            {
+                windowX = (int)(virtualScreenLeft + (virtualScreenWidth - this.Width) / 2);
+            }
+
+            if (windowY < virtualScreenTop || windowY > virtualScreenTop + virtualScreenHeight - this.Height)
+            {
+                windowY = (int)(virtualScreenTop + (virtualScreenHeight - this.Height) / 2);
+            }
+
+            this.Left = windowX;
+            this.Top = windowY;
+
+            this.WindowState = _settingsService.CurrentSettings.WindowMaximized ? WindowState.Maximized : WindowState.Normal;
+        }
+
+        private void MainWindow_Closing(object? sender, CancelEventArgs e)
+        {
+            var settings = _settingsService.CurrentSettings;
+            if (this.WindowState == WindowState.Normal)
+            {
+                settings.WindowHeight = (int)this.Height;
+                settings.WindowWidth = (int)this.Width;
+                settings.WindowX = (int)this.Left;
+                settings.WindowY = (int)this.Top;
+                settings.WindowMaximized = false;
+            }
+            else
+            {
+                settings.WindowHeight = (int)this.RestoreBounds.Height;
+                settings.WindowWidth = (int)this.RestoreBounds.Width;
+                settings.WindowX = (int)this.RestoreBounds.Left;
+                settings.WindowY = (int)this.RestoreBounds.Top;
+                settings.WindowMaximized = true;
+            }
+            _settingsService.SaveSettings();
         }
 
         protected override void OnSourceInitialized(EventArgs e)

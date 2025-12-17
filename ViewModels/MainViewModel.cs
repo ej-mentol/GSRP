@@ -308,7 +308,23 @@ namespace GSRP.ViewModels
             if (player == null) return;
             ReportNickname = player.Name;
             ReportSteamId = player.SteamId2;
-            SelectedTab = TabNames.Report;
+            
+            // Auto-copy logic
+            var template = _settingsService.CurrentSettings.ReportTemplate ?? string.Empty;
+            var reportText = template
+                .Replace("${ServerName}", SelectedServer ?? "N/A")
+                .Replace("${PlayerName}", ReportNickname ?? "")
+                .Replace("${SteamId}", ReportSteamId ?? "")
+                .Replace("${Details}", ReportDetails ?? "");
+            
+            CopyToClipboard(reportText, "Report");
+            StatusMessage = "Report copied to clipboard.";
+            
+            // We do NOT switch the tab anymore
+            // SelectedTab = TabNames.Report; 
+            
+            // Reset status message after a delay
+            Task.Delay(2000).ContinueWith(_ => StatusMessage = "Player Database & Reporting", TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         [RelayCommand]
@@ -347,12 +363,6 @@ namespace GSRP.ViewModels
             DbSearchResults.Clear();
             foreach (var player in results) DbSearchResults.Add(player);
             if (results.Count == 0) SystemSounds.Beep.Play();
-        }
-
-        [RelayCommand(IncludeCancelCommand = true)]
-        private async Task RefreshDataAsync(CancellationToken token)
-        {
-            await _playerRepository.ForceEnrichCurrentPlayersAsync(token);
         }
 
         [RelayCommand]
@@ -468,8 +478,16 @@ namespace GSRP.ViewModels
 
         private void ToggleConsoleConnectionInternal()
         {
-            if (IsConsoleConnected) _udpConsoleService.StartListening(_settingsService.CurrentSettings.UdpListenPort);
-            else _udpConsoleService.StopListening();
+            if (IsConsoleConnected)
+            {
+                _udpConsoleService.StopListening();
+                IsConsoleConnected = false;
+            }
+            else
+            {
+                _udpConsoleService.StartListening(_settingsService.CurrentSettings.UdpListenPort);
+                IsConsoleConnected = true;
+            }
         }
 
         private void SendConsoleMessage()
@@ -521,7 +539,9 @@ namespace GSRP.ViewModels
         private void CopyPlayerSteamId2(Player? player)
         {
             if (player == null) return;
-            var steamId2 = player.ParsedSteamId2 ?? player.SteamId2;
+            // Fix: Use ParsedSteamId2 if available, otherwise fallback to SteamId2 property
+            var steamId2 = !string.IsNullOrEmpty(player.ParsedSteamId2) ? player.ParsedSteamId2 : player.SteamId2;
+            
             if (string.IsNullOrEmpty(steamId2))
             {
                 _dialogService.ShowMessageDialog("Info", "This player does not have a SteamID to copy.");

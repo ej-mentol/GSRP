@@ -439,7 +439,7 @@ namespace GSRP.Services
                 if (File.Exists(avatarPath))
                 {
                     _avatarPathCache[avatarHash] = avatarPath;
-                    Application.Current.Dispatcher.Invoke(() =>
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         player.AvatarPath = avatarPath;
                         player.IsAvatarCached = true;
@@ -456,7 +456,7 @@ namespace GSRP.Services
                     var imageBytes = await response.Content.ReadAsByteArrayAsync(token);
                     await File.WriteAllBytesAsync(avatarPath, imageBytes, token);
                     _avatarPathCache[avatarHash] = avatarPath;
-                    Application.Current.Dispatcher.Invoke(() =>
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         player.AvatarPath = avatarPath;
                         player.IsAvatarCached = true;
@@ -465,7 +465,7 @@ namespace GSRP.Services
                 }
                 else
                 {
-                    Application.Current.Dispatcher.Invoke(() =>
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         player.AvatarDownloadFailed = true;
                     });
@@ -709,7 +709,7 @@ namespace GSRP.Services
 
             private void ApplySummaryDataToPlayer(Player player, PlayerData summary)
             {
-                Application.Current.Dispatcher.Invoke(() =>
+                _ = Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     player.ProfileStatus = summary.IsPrivate ? ProfileStatus.Private : ProfileStatus.Public;
                     player.PersonaName = summary.PersonaName;
@@ -725,7 +725,7 @@ namespace GSRP.Services
             }
         private void ApplyBanDataToPlayer(Player player, PlayerBanData banData)
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            _ = Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 player.IsCommunityBanned = banData.CommunityBanned;
                 player.EconomyBan = banData.EconomyBan;

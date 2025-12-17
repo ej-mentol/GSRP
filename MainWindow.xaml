@@ -198,13 +198,7 @@
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
                             <!-- Action Buttons -->
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button Width="32" Height="32" Margin="0,0,8,0" 
-                                        Command="{Binding RefreshDataCommand}"
-                                        Style="{StaticResource HeaderButton}"
-                                        ToolTip="Refresh player data"
-                                        Visibility="Collapsed">
-                                    <TextBlock Text="🔄" Foreground="#a6a8ab" FontSize="14"/>
-                                </Button>
+
                                 <Button Width="32" Height="32" 
                                         Command="{Binding ShowSettingsDialogCommand}"
                                         Style="{StaticResource HeaderButton}"
