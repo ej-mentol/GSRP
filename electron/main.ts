@@ -197,8 +197,22 @@ function createWindow() {
 }
 
 app.on('window-all-closed', () => {
-  backendProcess?.kill()
   if (process.platform !== 'darwin') app.quit()
+})
+
+app.on('quit', () => {
+  if (backendProcess) {
+    try {
+      const { execSync } = require('node:child_process')
+      // Hard kill the entire process tree of the daemon
+      if (!app.isPackaged) {
+        // In dev mode, we might want to be more careful, but usually it's fine
+        backendProcess.kill()
+      } else {
+        execSync('taskkill /F /IM GSRP.Daemon.exe /T', { stdio: 'ignore' })
+      }
+    } catch (e) {}
+  }
 })
 
 app.whenReady().then(() => {
