@@ -5,26 +5,26 @@ html {
 }
 
 :root {
-  /* Core Backgrounds */
-  --bg-sidebar: #09090b;
-  --bg-main: #0c0c0e;
-  --bg-card: #121214;
-  --bg-card-hover: #18181b;
+  /* Core Backgrounds (Rich Dark) */
+  --bg-sidebar: #0e0e11;
+  --bg-main: #121316;
+  --bg-card: #18191d;
+  --bg-card-hover: #1f2024;
 
   /* Borders & Dividers */
-  --border-subtle: #1f1f23;
-  --border-bright: #27272a;
+  --border-subtle: #27272a;
+  --border-bright: #3f3f46;
 
   /* Text Colors */
   --text-primary: #f4f4f5;
   --text-secondary: #a1a1aa;
-  --text-muted: #52525b;
+  --text-muted: #71717a;
 
-  /* Accent Colors (Professional Shades) */
+  /* Accent Colors (Vibrant) */
   --accent-blue: #3b82f6;
   --accent-steam: #60a5fa;
   --accent-red: #ef4444;
-  --accent-orange: #f59e0b;
+  --accent-orange: #f97316;
   --accent-purple: #a855f7;
   --accent-green: #10b981;
 }

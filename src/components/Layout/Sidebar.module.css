@@ -35,11 +35,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 48px;
-    width: 100%;
+    height: 40px; /* Compact */
+    width: 40px;  /* Square-ish buttons centered in 64px bar? No, width 100% of parent padding. */
+    margin: 0 auto;
+    width: 44px;  /* Floating buttons */
+    border-radius: 8px; /* Soft rounded */
     color: var(--text-secondary);
     cursor: pointer;
-    transition: all 0.1s ease;
+    transition: all 0.15s ease;
     background: transparent;
     border: none;
     position: relative;
@@ -47,21 +50,22 @@
 
 .navItem:hover {
     color: var(--text-primary);
-    background-color: var(--border-subtle);
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .navItemActive {
     color: var(--accent-blue);
-    background-color: rgba(59, 130, 246, 0.08);
+    background-color: rgba(59, 130, 246, 0.1);
 }
 
 .navItemActive::before {
     content: '';
     position: absolute;
-    left: 0;
-    top: 15%;
-    bottom: 15%;
+    left: -10px; /* Outside the button */
+    top: 50%;
+    transform: translateY(-50%);
     width: 3px;
+    height: 16px; /* Pill indicator */
     background-color: var(--accent-blue);
     border-radius: 0 4px 4px 0;
 }

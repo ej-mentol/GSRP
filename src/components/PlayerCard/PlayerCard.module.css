@@ -4,15 +4,15 @@
     background-color: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: 12px;
-    /* Nicely rounded */
-    padding: 12px 20px;
-    gap: 20px;
+    padding: 12px 16px;
+    gap: 16px;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
     cursor: default;
-    height: 96px;
-    margin: 0 12px 12px 12px;
-    /* Spacing between cards */
+    height: 96px; /* Slightly taller to accommodate larger fonts */
+    margin: 0 12px 4px 12px;
+    position: relative;
+    overflow: hidden; /* Keep border radius clean */
 }
 
 .card:hover {
@@ -35,100 +35,14 @@
 /* Avatar Section - Increased to 68px */
 .avatarContainer {
     position: relative;
-    width: 68px;
-    height: 68px;
+    width: 64px; /* Increased from 60px */
+    height: 64px;
     flex-shrink: 0;
-}
-
-.newPlayerRing::after {
-    content: '';
-    position: absolute;
-    top: -4px;
-    left: -4px;
-    right: -4px;
-    bottom: -4px;
-    border: 2px solid var(--accent-blue);
-    border-radius: 14px;
-    opacity: 0.5;
-    pointer-events: none;
-    animation: pulseRing 2s infinite;
-}
-
-@keyframes pulseRing {
-    0% {
-        transform: scale(0.95);
-        opacity: 0.5;
-    }
-
-    50% {
-        transform: scale(1);
-        opacity: 0.8;
-    }
-
-    100% {
-        transform: scale(0.95);
-        opacity: 0.5;
-    }
-}
-
-.avatar {
-    width: 100%;
-    height: 100%;
     border-radius: 10px;
-    object-fit: cover;
-    background-color: var(--bg-sidebar);
-    border: 1px solid var(--border-subtle);
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    overflow: hidden;
 }
 
-.avatarLoaded {
-    opacity: 1;
-}
-
-.avatarShimmer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 10px;
-    background: linear-gradient(90deg, var(--bg-sidebar) 0%, var(--border-bright) 50%, var(--bg-sidebar) 100%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-    0% {
-        background-position: -200% 0;
-    }
-
-    100% {
-        background-position: 200% 0;
-    }
-}
-
-.skeletonText {
-    height: 14px;
-    width: 80px;
-    border-radius: 4px;
-    background: linear-gradient(90deg, var(--bg-sidebar) 0%, var(--border-bright) 50%, var(--bg-sidebar) 100%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-}
-
-.avatarFallback {
-    width: 100%;
-    height: 100%;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #3f3f46 0%, #27272a 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--text-primary);
-}
+/* ... */
 
 /* Info Section - Spaced out lines */
 .info {
@@ -136,42 +50,44 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 4px;
-    height: 68px;
+    gap: 4px; /* More breathing room for text */
+    height: 64px;
 }
 
 .row {
     display: flex;
     align-items: center;
-    gap: 12px;
-    line-height: 1.1;
-    min-height: 18px;
+    gap: 8px;
+    line-height: 1.2;
+    min-height: 20px;
+    flex-wrap: wrap; /* Allow wrapping if name + badges are too long */
 }
 
 .displayName {
-    font-size: 16px;
+    font-size: 17px; /* Increased for accessibility */
     font-weight: 800;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .alias {
     background-color: var(--accent-blue);
     color: #fff;
-    font-size: 10px;
+    font-size: 11px; /* Increased */
     font-weight: 800;
     padding: 2px 8px;
     border-radius: 4px;
     text-transform: uppercase;
+    flex-shrink: 0;
 }
 
 .steamId {
     color: var(--text-secondary);
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    /* Reduced to fit 3-row layout better */
-    opacity: 0.6;
+    font-size: 13px; /* Readable Mono */
+    opacity: 0.9; /* High contrast */
     letter-spacing: -0.2px;
 }
 
@@ -179,44 +95,46 @@
     display: flex;
     gap: 6px;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .badge {
-    padding: 2px 8px;
-    /* Slightly plumper */
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 800;
+    padding: 2px 10px; /* Wider padding for pill shape */
+    border-radius: 20px; /* Capsule shape */
+    font-size: 10px; /* Slightly smaller, more refined */
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.2px;
+    letter-spacing: 0.02em;
     border: 1px solid transparent;
-    height: 18px;
+    height: 20px;
     display: flex;
     align-items: center;
+    gap: 4px;
     transition: all 0.2s ease;
 }
 
 .badgeRed {
-    background-color: transparent !important;
-    color: var(--accent-red);
-    border: 1px solid var(--accent-red);
+    background-color: rgba(239, 68, 68, 0.1) !important;
+    color: #ff5f5f;
+    border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
 .badgeOrange {
-    background-color: transparent !important;
-    color: var(--accent-orange);
-    border: 1px solid var(--accent-orange);
+    background-color: rgba(249, 115, 22, 0.1) !important;
+    color: #fb923c;
+    border: 1px solid rgba(249, 115, 22, 0.25);
 }
 
 .badgePurple {
-    background-color: transparent !important;
-    color: var(--accent-purple);
-    border: 1px solid var(--accent-purple);
+    background-color: rgba(168, 85, 247, 0.1) !important;
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.25);
 }
 
 .badgeDetail {
-    font-weight: 400;
-    opacity: 0.7;
+    font-weight: 700; /* Bold */
+    opacity: 0.9; /* High visibility */
+    margin-left: 2px;
 }
 
 .badgeDivider {
@@ -225,14 +143,16 @@
     margin: 0 2px;
 }
 
+/* ... */
+
 .personaName {
-    font-size: 10px;
+    font-size: 13px; /* Readable Secondary Name */
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     color: var(--accent-steam);
-    opacity: 0.9;
+    opacity: 1;
 }
 
 /* Rest of styles remain same... */

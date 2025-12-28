@@ -386,8 +386,8 @@ function App() {
                                                 key={player.steamId64}
                                                 player={player}
                                                 avatarPriority={enableAvatarCdn ? 'cdn' : 'cache'}
-                                                onContextMenu={(e) => setMenuConfig({ x: e.clientX, y: e.clientY, player, type: 'main' })}
-                                                onAvatarContextMenu={(e) => setMenuConfig({ x: e.clientX, y: e.clientY, player, type: 'avatar' })}
+                                                onContextMenu={(e) => { e.preventDefault(); setMenuConfig({ x: e.clientX, y: e.clientY, player, type: 'main' }); }}
+                                                onAvatarContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMenuConfig({ x: e.clientX, y: e.clientY, player, type: 'avatar' }); }}
                                             />
                                         ))}
                                     </div>
@@ -402,8 +402,8 @@ function App() {
                                     players={dbResults}
                                     enableAvatarCdn={enableAvatarCdn}
                                     favoriteColors={favoriteColors}
-                                    onContextMenu={(e, p) => setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'main' })}
-                                    onAvatarContextMenu={(e, p) => setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'avatar' })}
+                                    onContextMenu={(e, p) => { e.preventDefault(); setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'main' }); }}
+                                    onAvatarContextMenu={(e, p) => { e.preventDefault(); e.stopPropagation(); setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'avatar' }); }}
                                     onPickCustomColor={() => setColorPickerConfig({ isOpen: true, initialColor: '#3b82f6' })}
                                     vacBanned={dbSearchVac}
                                     gameBanned={dbSearchGame}

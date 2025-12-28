@@ -60,9 +60,9 @@ export const ShareablePlayerCard = forwardRef<HTMLDivElement, ShareableCardProps
             </div>
 
             <div className={styles.info}>
-                {/* Row 1: Display Name + Alias (Simplified for share) */}
+                {/* Row 1: Display Name */}
                 <div className={styles.row}>
-                    <div className={styles.displayName} style={getStyleForColor(player.playerColor)}>{player.personaName || player.displayName}</div>
+                    <div className={styles.displayName} style={getStyleForColor(player.playerColor)}>{player.displayName}</div>
                 </div>
 
                 {/* Row 2: SteamID */}
@@ -70,9 +70,9 @@ export const ShareablePlayerCard = forwardRef<HTMLDivElement, ShareableCardProps
                     <div className={styles.steamId}>{player.steamId2}</div>
                 </div>
 
-                {/* Row 3: Secondary Name + Badges */}
+                {/* Row 3: Persona Name + Badges */}
                 <div className={styles.row}>
-                    <div className={styles.personaName} style={getStyleForColor(player.personaNameColor, true, '#60a5fa')}>
+                    <div className={styles.personaName} style={getStyleForColor(player.personaNameColor, true, 'var(--accent-steam)')}>
                         {player.personaName || player.displayName}
                     </div>
                     <div className={styles.badges}>
@@ -88,7 +88,7 @@ export const ShareablePlayerCard = forwardRef<HTMLDivElement, ShareableCardProps
                                 Community
                             </div>
                         )}
-                        {(player.economyBan && player.economyBan !== "0") && (
+                        {(player.economyBan && player.economyBan !== "0" && player.economyBan.toLowerCase() !== "none") && (
                             <div className={`${styles.badge} ${styles.badgePurple}`}>
                                 <ShoppingBag size={10} style={{ marginRight: 4 }} />
                                 Economy

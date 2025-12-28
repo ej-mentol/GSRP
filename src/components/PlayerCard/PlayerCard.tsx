@@ -80,7 +80,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
     const vacCount = getSafeBanCount(player.numberOfVacBans);
     const gameCount = getSafeBanCount(player.numberOfGameBans);
     const isComBanned = player.isCommunityBanned === true;
-    const ecoStatus = (player.economyBan && player.economyBan !== "0") ? player.economyBan : null;
+    const ecoStatus = (player.economyBan && player.economyBan !== "0" && player.economyBan.toLowerCase() !== "none") ? player.economyBan : null;
 
     const getDaysSinceBan = () => {
         const bd = Number(player.banDate);
@@ -88,23 +88,8 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         return Math.floor((Date.now() - (bd * 1000)) / 86400000);
     };
 
-    const formatBanAge = (days: number | null) => {
-        if (days === null) return '';
-        if (days === 0) return 'today';
-        if (days > 365) return `${Math.floor(days / 365)}y ago`;
-        return `${days}d ago`;
-    };
-    const banAge = formatBanAge(getDaysSinceBan());
-
-    let redBadgeText = '';
-    if (vacCount > 0) {
-        redBadgeText += vacCount === 1 ? 'VAC ban' : `${vacCount} VAC bans`;
-        if (banAge) redBadgeText += ` ${banAge}`;
-    }
-    if (gameCount > 0) {
-        if (redBadgeText) redBadgeText += ' | ';
-        redBadgeText += gameCount === 1 ? 'Game ban' : `${gameCount} Game bans`;
-    }
+    const daysSince = getDaysSinceBan();
+    const banAgeLabel = daysSince !== null ? (daysSince === 0 ? 'today' : `${daysSince}d`) : '';
 
     // --- AVATAR URL LOGIC ---
     const avatarUrl = player.avatarHash && player.avatarHash.length > 5 && player.avatarHash !== "0"
@@ -201,22 +186,32 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                         {player.personaName || player.displayName}
                     </div>
                     <div className={styles.badges}>
-                        {redBadgeText && (
+                        {vacCount > 0 && (
                             <div className={`${styles.badge} ${styles.badgeRed}`}>
-                                <ShieldAlert size={10} style={{ marginRight: 4 }} />
-                                {redBadgeText}
+                                <ShieldAlert size={10} />
+                                <span>VAC BAN</span>
+                                {vacCount > 1 && <span className={styles.badgeDetail}>×{vacCount}</span>}
+                                {banAgeLabel && <span className={styles.badgeDetail}>({banAgeLabel})</span>}
+                            </div>
+                        )}
+                        {gameCount > 0 && (
+                            <div className={`${styles.badge} ${styles.badgeOrange}`}>
+                                <Hammer size={10} />
+                                <span>GAME BAN</span>
+                                {gameCount > 1 && <span className={styles.badgeDetail}>×{gameCount}</span>}
+                                {banAgeLabel && <span className={styles.badgeDetail}>({banAgeLabel})</span>}
                             </div>
                         )}
                         {isComBanned && (
                             <div className={`${styles.badge} ${styles.badgeOrange}`}>
-                                <Hammer size={10} style={{ marginRight: 4 }} />
-                                Community Ban
+                                <Hammer size={10} />
+                                COMMUNITY
                             </div>
                         )}
                         {ecoStatus && (
                             <div className={`${styles.badge} ${styles.badgePurple}`}>
-                                <ShoppingBag size={10} style={{ marginRight: 4 }} />
-                                Economy Ban
+                                <ShoppingBag size={10} />
+                                ECONOMY
                             </div>
                         )}
                     </div>
