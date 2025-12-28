@@ -33,7 +33,8 @@ export const buildPlayerMainMenu = (
         onSetColor: (p: Player, target: 'game' | 'steam' | 'alias') => void,
         onCopyImage: (p: Player) => void,
         onRefresh: (p: Player) => void,
-        onAddToReport: (p: Player) => void
+        onAddToReport: (p: Player) => void,
+        onCustomize: (p: Player) => void
     }
 ): MenuItem[] => {
     const quickReasons = ['Cheating', 'Abuse', 'Toxic', 'Teamkill', 'N-Word'];
@@ -60,6 +61,7 @@ export const buildPlayerMainMenu = (
 
     return [
         { label: 'Update Profile', icon: <RefreshCw size={14} />, iconColorClass: 'blueIcon', action: () => actions.onRefresh(player) },
+        { label: 'Customize Appearance', icon: <Palette size={14} />, iconColorClass: 'purpleIcon', action: () => actions.onCustomize(player) },
         { separator: true },
         { label: 'Copy Name', icon: <User size={14} />, iconColorClass: 'blueIcon', action: () => copy(player.displayName) },
         { label: 'Copy PersonaName', icon: <User size={14} />, iconColorClass: 'blueIcon', action: () => copy(player.personaName) },
@@ -71,11 +73,6 @@ export const buildPlayerMainMenu = (
         { separator: true },
         { label: 'Copy to Report (Builder)', icon: <Flag size={14} />, iconColorClass: 'redIcon', action: () => actions.onAddToReport(player) },
         { label: 'Copy as Report (Quick)', icon: <FileText size={14} />, iconColorClass: 'purpleIcon', children: serverSubMenu },
-        { separator: true },
-        { label: 'Set Alias', icon: <Edit2 size={14} />, iconColorClass: 'blueIcon', action: () => actions.onSetAlias(player) },
-        { label: 'Change Game Color', icon: <Palette size={14} />, iconColorClass: 'pinkIcon', action: () => actions.onSetColor(player, 'game') },
-        { label: 'Change Steam Color', icon: <Palette size={14} />, iconColorClass: 'blueIcon', action: () => actions.onSetColor(player, 'steam') },
-        { label: 'Change Alias Color', icon: <Palette size={14} />, iconColorClass: 'purpleIcon', action: () => actions.onSetColor(player, 'alias') },
         { separator: true },
         { label: 'Copy as Image', icon: <ImageIcon size={14} />, iconColorClass: 'blueIcon', action: () => actions.onCopyImage(player) },
     ];

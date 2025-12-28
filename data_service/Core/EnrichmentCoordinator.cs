@@ -65,6 +65,7 @@ namespace GSRP.Daemon.Core
                     p.IconName = dbPlayer.IconName;
                     p.PersonaNameColor = dbPlayer.PersonaNameColor;
                     p.AliasColor = dbPlayer.AliasColor;
+                    p.CardColor = dbPlayer.CardColor;
                     p.ProfileStatus = dbPlayer.ProfileStatus;
                 }
 
@@ -140,7 +141,7 @@ namespace GSRP.Daemon.Core
 
                             // CLEAN ECONOMY BAN
                             var eco = b.EconomyBan?.ToLower();
-                            p.EconomyBan = (eco == "none" || string.IsNullOrWhiteSpace(eco) || eco == "0") ? null : b.EconomyBan;
+                            p.EconomyBan = (eco == "none" || string.IsNullOrWhiteSpace(eco) || eco == "0") ? "none" : b.EconomyBan;
                         }
 
                         await _storage.SavePlayerAsync(p);

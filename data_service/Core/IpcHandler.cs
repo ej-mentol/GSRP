@@ -113,6 +113,7 @@ namespace GSRP.Daemon.Core
                                 if (target == "game") p.PlayerColor = color;
                                 else if (target == "steam") p.PersonaNameColor = color;
                                 else if (target == "alias") p.AliasColor = color;
+                                else if (target == "card") p.CardColor = color;
                                 await _storage.SavePlayerAsync(p);
                                 _sendToElectron("UPDATE_PLAYER", p);
                             }

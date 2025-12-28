@@ -125,9 +125,22 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
     const isNewPlayer = !player.lastUpdated || player.lastUpdated === 0;
 
     const hasAnyBan = (vacCount > 0) || (gameCount > 0) || isComBanned || ecoStatus;
+    
+    // Custom Card Color Logic
+    const cardStyle: React.CSSProperties = {};
+    if (player.cardColor && player.cardColor !== '0' && player.cardColor !== 'none') {
+        cardStyle.borderLeft = `4px solid ${player.cardColor}`;
+    } else if (hasAnyBan) {
+        // Fallback to ban color class logic, handled by className, but if we want consistency:
+        // Actually, let's keep the class logic for bans, but override if cardColor exists.
+    }
 
     return (
-        <div className={`${styles.card} ${hasAnyBan ? styles.hasBan : ''}`} onContextMenu={(e) => onContextMenu(e, player)}>
+        <div 
+            className={`${styles.card} ${hasAnyBan && !player.cardColor ? styles.hasBan : ''}`} 
+            style={cardStyle}
+            onContextMenu={(e) => onContextMenu(e, player)}
+        >
             <div className={`${styles.avatarContainer} ${isNewPlayer ? styles.newPlayerRing : ''}`} onContextMenu={(e) => { e.stopPropagation(); onAvatarContextMenu(e, player); }}>
                 {avatarUrl && !imgError ? (
                     <img
@@ -150,37 +163,37 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                     <span className={styles.displayName} style={getStyleForColor(player.playerColor)}>
                         {isDatabaseEntry ? player.personaName : player.displayName}
                     </span>
-                    {isDatabaseEntry && (
-                        <span
-                            title="Archival name from Steam Profile (not from game console)."
-                            style={{ marginLeft: 6, display: 'inline-flex', alignItems: 'center', opacity: 0.4, cursor: 'help' }}
-                        >
-                            <Info size={10} color="var(--text-muted)" />
-                        </span>
-                    )}
-                    {!isDatabaseEntry && player.alias && (
+                    {player.alias && (
                         <div className={styles.alias} style={getStyleForColor(player.aliasColor, false, 'var(--accent-blue)')}>
                             {player.alias}
                         </div>
+                    )}
+                    {isDatabaseEntry && (
+                        <span
+                            title="Archival name from Steam Profile (not from game console)."
+                            style={{ display: 'inline-flex', alignItems: 'center', opacity: 0.4, cursor: 'help' }}
+                        >
+                            <Info size={12} color="var(--text-muted)" />
+                        </span>
                     )}
                 </div>
 
                 {/* ROW 2: SteamID */}
                 <div className={styles.row}>
-                    <div className={styles.steamId}>
+                    <div className={styles.steamId} style={{ color: regInfo.color }}>
                         {player.steamId2 || "Unknown"}
                         {isDatabaseEntry && (
                             <span
                                 title="Calculated from Steam64. May vary slightly on some servers (STEAM_0 vs STEAM_1)."
-                                style={{ marginLeft: 4, cursor: 'help', opacity: 0.5, fontSize: 10 }}
+                                style={{ marginLeft: 6, display: 'inline-flex', alignItems: 'center', opacity: 0.4, cursor: 'help' }}
                             >
-                                *
+                                <Info size={12} color="var(--text-muted)" />
                             </span>
                         )}
                     </div>
                 </div>
 
-                {/* ROW 3: Steam Nick [Ban Badges] */}
+                {/* ROW 3: Steam Nick + Badges */}
                 <div className={styles.row}>
                     <div className={styles.personaName} style={getStyleForColor(player.personaNameColor, true, 'var(--accent-steam)')}>
                         {player.personaName || player.displayName}
@@ -188,7 +201,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                     <div className={styles.badges}>
                         {vacCount > 0 && (
                             <div className={`${styles.badge} ${styles.badgeRed}`}>
-                                <ShieldAlert size={10} />
+                                <ShieldAlert size={12} />
                                 <span>VAC BAN</span>
                                 {vacCount > 1 && <span className={styles.badgeDetail}>×{vacCount}</span>}
                                 {banAgeLabel && <span className={styles.badgeDetail}>({banAgeLabel})</span>}
@@ -196,7 +209,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                         )}
                         {gameCount > 0 && (
                             <div className={`${styles.badge} ${styles.badgeOrange}`}>
-                                <Hammer size={10} />
+                                <Hammer size={12} />
                                 <span>GAME BAN</span>
                                 {gameCount > 1 && <span className={styles.badgeDetail}>×{gameCount}</span>}
                                 {banAgeLabel && <span className={styles.badgeDetail}>({banAgeLabel})</span>}
@@ -204,13 +217,13 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                         )}
                         {isComBanned && (
                             <div className={`${styles.badge} ${styles.badgeOrange}`}>
-                                <Hammer size={10} />
+                                <Hammer size={12} />
                                 COMMUNITY
                             </div>
                         )}
                         {ecoStatus && (
                             <div className={`${styles.badge} ${styles.badgePurple}`}>
-                                <ShoppingBag size={10} />
+                                <ShoppingBag size={12} />
                                 ECONOMY
                             </div>
                         )}

@@ -53,13 +53,26 @@ namespace GSRP.Daemon.Services
                         last_vac_check INTEGER,
                         economy_ban TEXT,
                         ban_date INTEGER DEFAULT 0,
-                        alias_color TEXT
+                        alias_color TEXT,
+                        card_color TEXT
                     );
                     CREATE INDEX IF NOT EXISTS idx_steam_id64 ON players(steam_id64);
                     CREATE INDEX IF NOT EXISTS idx_personaname ON players(personaname);
                     CREATE INDEX IF NOT EXISTS idx_alias ON players(alias);
                 ";
                 cmd.ExecuteNonQuery();
+
+                // Schema Migration: Check for 'card_color' (added in v2.1)
+                try {
+                    var checkCmd = conn.CreateCommand();
+                    checkCmd.CommandText = "SELECT card_color FROM players LIMIT 1";
+                    checkCmd.ExecuteNonQuery();
+                } catch {
+                    // Column missing, add it
+                    var alterCmd = conn.CreateCommand();
+                    alterCmd.CommandText = "ALTER TABLE players ADD COLUMN card_color TEXT";
+                    alterCmd.ExecuteNonQuery();
+                }
             });
         }
 
@@ -158,7 +171,8 @@ namespace GSRP.Daemon.Services
                 LastVacCheck = reader.IsDBNull(Get("last_vac_check")) ? 0 : reader.GetInt64(Get("last_vac_check")),
                 EconomyBan = GetStr("economy_ban") ?? "none",
                 BanDate = reader.GetInt64(Get("ban_date")),
-                AliasColor = GetStr("alias_color")
+                AliasColor = GetStr("alias_color"),
+                CardColor = GetStr("card_color")
             };
             p.SteamId2 = SteamId64To2(p.SteamId64);
             p.DisplayName = !string.IsNullOrEmpty(p.Alias) ? p.Alias : p.PersonaName;
@@ -180,16 +194,16 @@ namespace GSRP.Daemon.Services
                         INSERT INTO players (
                             steam_id64, alias, txt_color, avatarhash, timecreated, personaname, 
                             last_updated, iconname, stm_color, profile_status, is_community_banned,
-                            number_of_vac_bans, number_of_game_bans, last_vac_check, economy_ban, ban_date, alias_color
+                            number_of_vac_bans, number_of_game_bans, last_vac_check, economy_ban, ban_date, alias_color, card_color
                         ) VALUES (
-                            @id, @alias, @txt_c, @hash, @tc, @pname, @lu, @icon, @stm_c, @ps, @icb, @nvb, @ngb, @lvc, @eb, @bd, @ac
+                            @id, @alias, @txt_c, @hash, @tc, @pname, @lu, @icon, @stm_c, @ps, @icb, @nvb, @ngb, @lvc, @eb, @bd, @ac, @cc
                         ) ON CONFLICT(steam_id64) DO UPDATE SET
                             alias=excluded.alias, txt_color=excluded.txt_color, avatarhash=excluded.avatarhash,
                             timecreated=excluded.timecreated, personaname=excluded.personaname, last_updated=excluded.last_updated,
                             iconname=excluded.iconname, stm_color=excluded.stm_color, profile_status=excluded.profile_status,
                             is_community_banned=excluded.is_community_banned, number_of_vac_bans=excluded.number_of_vac_bans,
                             number_of_game_bans=excluded.number_of_game_bans, last_vac_check=excluded.last_vac_check,
-                            economy_ban=excluded.economy_ban, ban_date=excluded.ban_date, alias_color=excluded.alias_color
+                            economy_ban=excluded.economy_ban, ban_date=excluded.ban_date, alias_color=excluded.alias_color, card_color=excluded.card_color
                     ";
                     
                     cmd.Parameters.AddWithValue("@id", p.SteamId64);
@@ -209,6 +223,7 @@ namespace GSRP.Daemon.Services
                     cmd.Parameters.AddWithValue("@eb", (object?)p.EconomyBan ?? DBNull.Value); 
                     cmd.Parameters.AddWithValue("@bd", p.BanDate);
                     cmd.Parameters.AddWithValue("@ac", ColorToDb(p.AliasColor));
+                    cmd.Parameters.AddWithValue("@cc", ColorToDb(p.CardColor));
                     
                     cmd.ExecuteNonQuery();
                 } catch { }

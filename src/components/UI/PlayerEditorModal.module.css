@@ -1,0 +1,216 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8); /* Darker */
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999; /* High Z-Index */
+}
+
+.modal {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-bright);
+    border-radius: 16px;
+    width: 600px;
+    padding: 24px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.closeButton {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.closeButton:hover {
+    color: var(--text-primary);
+    background-color: var(--border-subtle);
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.previewArea {
+    padding: 20px;
+    background-color: var(--bg-sidebar);
+    border-radius: 12px;
+    border: 1px dashed var(--border-subtle);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.interactivePreview {
+    position: relative;
+    cursor: crosshair;
+}
+
+.paletteArea {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sectionLabel {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+}
+
+.colorGrid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.colorBtn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.1s;
+    position: relative;
+}
+
+.colorBtn:hover {
+    transform: scale(1.1);
+}
+
+.colorBtnActive {
+    border-color: #fff;
+    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent-blue);
+}
+
+.eraserBtn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px dashed var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    background: transparent;
+}
+
+.eraserBtnActive {
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.aliasInput {
+    background-color: var(--bg-sidebar);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.aliasInput:focus {
+    border-color: var(--accent-blue);
+}
+
+.clearAliasBtn {
+    position: absolute;
+    right: 10px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.clearAliasBtn:hover {
+    color: var(--text-primary);
+}
+
+.footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.btn {
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.btnCancel {
+    background-color: transparent;
+    color: var(--text-secondary);
+}
+
+.btnCancel:hover {
+    background-color: var(--border-subtle);
+    color: var(--text-primary);
+}
+
+.btnSave {
+    background-color: var(--accent-blue);
+    color: white;
+}
+
+.btnSave:hover {
+    background-color: #2563eb;
+}
+
+.hoverText:hover {
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+    transform: scale(1.02);
+}
+
+.hoverElement:hover {
+    box-shadow: 0 0 0 2px var(--accent-blue);
+    transform: scale(1.05);
+}
+
+.hoverZone:hover {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), transparent);
+}

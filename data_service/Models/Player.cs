@@ -9,6 +9,7 @@ namespace GSRP.Backend.Models
         public string? Alias { get; set; }
         
         public string? PlayerColor { get; set; }
+        public string? CardColor { get; set; } // Side stripe gradient
         public string? PersonaNameColor { get; set; }
         public string? AliasColor { get; set; }
         public string? IconName { get; set; }
