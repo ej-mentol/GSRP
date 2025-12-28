@@ -1,19 +1,14 @@
-import React from 'react';
 import {
-    User, FileText, ExternalLink, Flag, Edit2, Palette,
-    Image as ImageIcon, CreditCard, Copy, Hash, X, Calendar, RefreshCw
+    User, FileText, ExternalLink, Flag, Palette,
+    Image as ImageIcon, Copy, X, RefreshCw, Hash, Calendar
 } from 'lucide-react';
 import { Player } from '../types';
 import { MenuItem } from '../components/UI/ContextMenu';
-
 import { isPrivateProfile } from '../utils/playerHelpers';
 
 const SteamBadge = ({ text }: { text: string }) => (
     <div style={{ fontSize: '9px', fontWeight: 800, border: '1px solid currentColor', borderRadius: '3px', padding: '0 2px', minWidth: '20px', textAlign: 'center', lineHeight: '14px' }}>{text}</div>
 );
-
-// ... (existing code)
-
 
 const generateQuickReport = (player: Player, server: string, tags: string) => {
     return `Server: ${server}\nTarget: ${player.displayName}\nID: ${player.steamId2}\nReason: ${tags || 'Reported for review'}\nEvidence:`
@@ -25,8 +20,8 @@ export const buildPlayerMainMenu = (
     player: Player,
     currentTags: string[],
     onToggleTag: (tag: string) => void,
-    onTabChange: (tab: string) => void,
-    onUpdateMenu: (items: MenuItem[]) => void,
+    _onTabChange: (tab: string) => void,
+    _onUpdateMenu: (items: MenuItem[]) => void,
     servers: string[],
     actions: {
         onSetAlias: (p: Player) => void,

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Modal } from '../UI/Modal';
-import styles from './ReportView.module.css';
 
 interface ServerEditorModalProps {
     isOpen: boolean;

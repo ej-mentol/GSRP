@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './WindowControls.module.css';
-import { Minus, Square, X } from 'lucide-react';
+import { Square, X } from 'lucide-react';
 
 export const WindowControls: React.FC = () => {
     

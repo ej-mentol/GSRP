@@ -8,6 +8,7 @@ export interface Player {
     // Visuals
     avatarHash: string;
     playerColor?: string;
+    cardColor?: string;
     personaNameColor?: string;
     aliasColor?: string;
     iconName?: string;

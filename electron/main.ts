@@ -158,8 +158,12 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
   })
 
-  if (VITE_DEV_SERVER_URL) win.loadURL(VITE_DEV_SERVER_URL)
-  else win.loadFile(path.join(process.env.DIST!, 'index.html'))
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL)
+  } else {
+    // Standard path for Vite + Electron
+    win.loadFile(path.join(__dirname, '../dist/index.html'))
+  }
 
   spawnBackend()
 }

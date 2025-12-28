@@ -5,6 +5,7 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
+    "clean": "if exist dist rmdir /s /q dist && if exist dist-electron rmdir /s /q dist-electron",
     "build:dotnet": "dotnet publish data_service/GSRP.Daemon.csproj -c Release -r win-x64 --self-contained",
     "build": "npm run build:dotnet && tsc && vite build && electron-builder",
     "preview": "vite preview"
@@ -12,9 +13,14 @@
   "build": {
     "appId": "com.gsrp.electron",
     "productName": "GSRP Client",
+    "files": [
+      "dist",
+      "dist-electron",
+      "package.json"
+    ],
     "extraResources": [
       {
-        "from": "data_service/bin/Release/net9.0-windows/win-x64/publish/",
+        "from": "./data_service/bin/Release/net9.0-windows/win-x64/publish",
         "to": "bin",
         "filter": [
           "**/*"
@@ -23,7 +29,8 @@
     ],
     "win": {
       "target": "dir"
-    }
+    },
+    "asar": true
   },
   "dependencies": {
     "html-to-image": "^1.11.13",

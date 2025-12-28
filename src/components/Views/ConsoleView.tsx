@@ -42,8 +42,6 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
     const logEndRef = useRef<HTMLDivElement>(null);
     const logAreaRef = useRef<HTMLDivElement>(null);
 
-    // ... (intermediate code) ...
-
     const handleScroll = () => {
         if (!logAreaRef.current) return;
         const { scrollTop, scrollHeight, clientHeight } = logAreaRef.current;
@@ -61,8 +59,8 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
         const now = Date.now();
         const timeWindow = 100;
 
-        setMessages(prev => {
-            const duplicateIndex = prev.findLastIndex(m => 
+        setMessages((prev: LogMessage[]) => {
+            const duplicateIndex = prev.findLastIndex((m: LogMessage) => 
                 m.text === text && (now - m.receivedAt) < timeWindow
             );
 
@@ -132,14 +130,17 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
         } else if (e.key === 'Tab') {
             e.preventDefault();
             if (inputValue) {
-                const matches = AUTOCOMPLETE_OPTIONS.filter(opt => opt.startsWith(inputValue));
+                const matches = [
+                    "say ", "status", "echo ", "connect ", "disconnect", "quit", "name ", 
+                    "map ", "retry", "kill", "say_team ", "snapshot", "clear"
+                ].filter((opt: string) => opt.startsWith(inputValue));
                 if (matches.length === 1) setInputValue(matches[0]);
                 else if (matches.length > 1) {
                     // Find common prefix
-                    const shortest = matches.reduce((a, b) => a.length <= b.length ? a : b);
+                    const shortest = matches.reduce((a: string, b: string) => a.length <= b.length ? a : b);
                     let prefix = inputValue;
                     for (let i = 0; i < shortest.length; i++) {
-                        if (matches.every(m => m.startsWith(shortest.slice(0, i + 1)))) {
+                        if (matches.every((m: string) => m.startsWith(shortest.slice(0, i + 1)))) {
                             prefix = shortest.slice(0, i + 1);
                         } else break;
                     }

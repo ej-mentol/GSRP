@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import styles from './DatabaseView.module.css';
 import { Player } from '../../types';
 import { PlayerCard } from '../PlayerCard/PlayerCard';
-import { Search, SortAsc, Plus } from 'lucide-react';
+import { Search, SortAsc } from 'lucide-react';
 
 interface DatabaseViewProps {
     searchTerm: string;

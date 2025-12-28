@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './PlayerEditorModal.module.css';
 import { Player } from '../../types';
-import { X, Eraser, Save, PaintBucket, MousePointer2, ArrowRight } from 'lucide-react';
+import { X, Eraser, ArrowRight } from 'lucide-react';
 
 interface PlayerEditorModalProps {
     isOpen: boolean;

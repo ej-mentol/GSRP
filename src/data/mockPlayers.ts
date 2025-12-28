@@ -32,7 +32,6 @@ export const mockPlayers: Player[] = [
         aliasColor: "#ffd700",
         iconName: "shield.svg", // We'll mock this as a tinted SVG
         iconColor: "#fbbf24", // Golden tint
-        iconPosition: "bottom-right",
         profileStatus: 'Public',
         isCommunityBanned: false,
         numberOfVacBans: 0,
@@ -49,7 +48,6 @@ export const mockPlayers: Player[] = [
         personaName: "LegitPlayer",
         avatarHash: "placeholder",
         iconName: "star.png", // PNG Example (no tint)
-        iconPosition: "top-right",
         profileStatus: 'Public',
         isCommunityBanned: false,
         numberOfVacBans: 0,

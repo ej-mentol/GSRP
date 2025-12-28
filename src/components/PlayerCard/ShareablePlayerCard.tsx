@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
 import styles from './ShareablePlayerCard.module.css';
 import { Player } from '../../types';
 import { Shield, ShieldAlert, Hammer, ShoppingBag } from 'lucide-react';
@@ -30,8 +30,6 @@ interface ShareableCardProps {
 }
 
 export const ShareablePlayerCard = forwardRef<HTMLDivElement, ShareableCardProps>(({ player }, ref) => {
-    const [imgError, setImgError] = React.useState(false);
-
     if (!player) return null;
 
     // Always use fallback to avoid CORS issues during export

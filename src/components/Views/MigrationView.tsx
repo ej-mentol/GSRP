@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styles from './MigrationView.module.css';
-import { Coffee, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Coffee, CheckCircle2 } from 'lucide-react';
 
 interface MigrationViewProps {
     recordCount: number;

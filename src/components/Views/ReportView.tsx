@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './ReportView.module.css';
-import { X, UserPlus, AlertTriangle, ChevronDown, Search, Plus, Calendar, Hash, User, Check } from 'lucide-react';
+import { X, UserPlus, AlertTriangle, ChevronDown, Search, Plus } from 'lucide-react';
 import { defaultSettings } from '../../data/mockSettings';
 import { Player } from '../../types';
 import { ContextMenu } from '../UI/ContextMenu';

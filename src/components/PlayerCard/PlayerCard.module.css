@@ -9,10 +9,10 @@
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
     cursor: default;
-    height: 96px; /* Slightly taller to accommodate larger fonts */
+    height: 96px; 
     margin: 0 12px 4px 12px;
     position: relative;
-    overflow: hidden; /* Keep border radius clean */
+    overflow: hidden;
 }
 
 .card:hover {
@@ -32,25 +32,86 @@
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1), 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* Avatar Section - Increased to 68px */
 .avatarContainer {
     position: relative;
-    width: 64px; /* Increased from 60px */
+    width: 64px;
     height: 64px;
     flex-shrink: 0;
     border-radius: 10px;
     overflow: hidden;
 }
 
-/* ... */
+.newPlayerRing::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border: 2px solid var(--accent-blue);
+    border-radius: 14px;
+    opacity: 0.5;
+    pointer-events: none;
+    animation: pulseRing 2s infinite;
+}
 
-/* Info Section - Spaced out lines */
+@keyframes pulseRing {
+    0% { transform: scale(0.95); opacity: 0.5; }
+    50% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(0.95); opacity: 0.5; }
+}
+
+.avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    object-fit: cover;
+    background-color: var(--bg-sidebar);
+    border: 1px solid var(--border-subtle);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.avatarLoaded {
+    opacity: 1;
+}
+
+.avatarShimmer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, var(--bg-sidebar) 0%, var(--border-bright) 50%, var(--bg-sidebar) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.avatarFallback {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #3f3f46 0%, #27272a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
 .info {
     flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 4px; /* More breathing room for text */
+    gap: 4px;
     height: 64px;
 }
 
@@ -60,11 +121,11 @@
     gap: 8px;
     line-height: 1.2;
     min-height: 20px;
-    flex-wrap: wrap; /* Allow wrapping if name + badges are too long */
+    flex-wrap: wrap;
 }
 
 .displayName {
-    font-size: 17px; /* Increased for accessibility */
+    font-size: 17px;
     font-weight: 800;
     white-space: nowrap;
     overflow: hidden;
@@ -75,7 +136,7 @@
 .alias {
     background-color: var(--accent-blue);
     color: #fff;
-    font-size: 11px; /* Increased */
+    font-size: 11px;
     font-weight: 800;
     padding: 2px 8px;
     border-radius: 4px;
@@ -86,8 +147,8 @@
 .steamId {
     color: var(--text-secondary);
     font-family: 'JetBrains Mono', monospace;
-    font-size: 13px; /* Readable Mono */
-    opacity: 0.9; /* High contrast */
+    font-size: 13px;
+    opacity: 0.9;
     letter-spacing: -0.2px;
 }
 
@@ -95,18 +156,17 @@
     display: flex;
     gap: 8px;
     align-items: center;
-    margin-top: 4px; /* Space from row above */
 }
 
 .badge {
     padding: 1px 6px;
-    border-radius: 999px; /* Pill shape */
-    font-size: 10px; /* Smaller font for narrow look */
+    border-radius: 999px;
+    font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.01em;
     border: 1px solid transparent;
-    height: 18px; /* Narrower height */
+    height: 18px;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -133,8 +193,8 @@
 }
 
 .badgeDetail {
-    font-weight: 700; /* Bold */
-    opacity: 0.9; /* High visibility */
+    font-weight: 700;
+    opacity: 0.9;
     margin-left: 2px;
 }
 
@@ -144,10 +204,8 @@
     margin: 0 2px;
 }
 
-/* ... */
-
 .personaName {
-    font-size: 13px; /* Readable Secondary Name */
+    font-size: 13px;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
@@ -156,7 +214,6 @@
     opacity: 1;
 }
 
-/* Rest of styles remain same... */
 .rankIconContainer {
     position: absolute;
     width: 24px;
@@ -193,25 +250,10 @@
     object-fit: contain;
 }
 
-.top-left {
-    top: -6px;
-    left: -6px;
-}
-
-.top-right {
-    top: -6px;
-    right: -6px;
-}
-
-.bottom-left {
-    bottom: -6px;
-    left: -6px;
-}
-
-.bottom-right {
-    bottom: -6px;
-    right: -6px;
-}
+.top-left { top: -6px; left: -6px; }
+.top-right { top: -6px; right: -6px; }
+.bottom-left { bottom: -6px; left: -6px; }
+.bottom-right { bottom: -6px; right: -6px; }
 
 .status {
     display: flex;

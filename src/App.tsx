@@ -12,8 +12,6 @@ import { SettingsView } from './components/Views/SettingsView'
 import { ReportView } from './components/Views/ReportView'
 import { ConsoleView } from './components/Views/ConsoleView'
 import { MigrationView } from './components/Views/MigrationView'
-import { ColorPickerModal } from './components/UI/ColorPickerModal'
-import { AliasModal } from './components/UI/AliasModal'
 import { PlayerEditorModal } from './components/UI/PlayerEditorModal'
 import { buildPlayerMainMenu, buildAvatarMenu } from './menus/playerMenu'
 import { buildInputMenu } from './menus/inputMenu'
@@ -22,13 +20,6 @@ import { Search, Filter, SortAsc, Copy } from 'lucide-react'
 import './App.css'
 
 function App() {
-    // --- DESIGN CONSTANTS ---
-    const DEFAULT_COLORS = {
-        game: '#f4f4f5',
-        steam: '#60a5fa',
-        alias: '#3b82f6'
-    };
-
     const [activeTab, setActiveTab] = useState('Players');
     const [playersSearchTerm, setPlayersSearchTerm] = useState('');
     const [dbSearchTerm, setDbSearchTerm] = useState('');
@@ -51,15 +42,12 @@ function App() {
     const [reportData, setReportData] = useState({ server: '', tags: [] as string[], details: '', template: '', prefix: '`', suffix: '`' });
     const [copyStatus, setCopyStatus] = useState('Copy Report');
 
-    const [designDefaults, setDesignDefaults] = useState({ game: '#f4f4f5', steam: '#60a5fa', alias: '#3b82f6' });
     const [migrationData, setMigrationData] = useState<{ recordCount: number, progress: number, status: string } | null>(null);
     const [isAppReady, setIsAppReady] = useState(false);
     const [initError, setInitError] = useState<string | null>(null);
 
-    const [colorPickerConfig, setColorPickerConfig] = useState<{ isOpen: boolean, initialColor: string, targetPlayer?: Player, targetType?: 'game' | 'steam' | 'alias', title?: string } | null>(null);
     const [editorModalConfig, setEditorModalConfig] = useState<{ isOpen: boolean, player: Player | null } | null>(null);
-    const [aliasModalConfig, setAliasModalConfig] = useState<{ isOpen: boolean, player: Player | null } | null>(null);
-    const [onlyBans, setOnlyBans] = React.useState(false);
+    const [onlyBans, setOnlyBans] = useState(false);
 
     const [menuConfig, setMenuConfig] = useState<{ x: number, y: number, player?: Player, type: 'main' | 'avatar' | 'input', element?: any } | null>(null);
     const [udpTargetIp, setUdpTargetIp] = useState('127.0.0.1');
@@ -79,10 +67,7 @@ function App() {
                 case 'UPDATE_PLAYER':
                     const updater = (list: Player[]) => list.map(p => {
                         if (p.steamId64 === msg.data.steamId64) {
-                            const { displayName, steamId2, personaName, ...enrichment } = msg.data;
-                            const merged: any = { ...p, ...enrichment };
-                            if (personaName && personaName.trim() !== "") merged.personaName = personaName;
-                            return merged;
+                            return { ...p, ...msg.data };
                         }
                         return p;
                     });
@@ -97,28 +82,21 @@ function App() {
         });
 
         window.ipcRenderer?.on('backend-crash', (_e, code) => {
-            console.error(`Core Engine Crashed (Code: ${code})`);
             setInitError(`Core Engine Failed (Exit Code: ${code})`);
             setIsAppReady(false);
         });
 
         const initData = async () => {
-            const s = await window.ipcRenderer?.invoke('get-setting', 'servers') || await window.ipcRenderer?.invoke('get-setting', 'Servers');
+            const s = await window.ipcRenderer?.invoke('get-setting', 'servers');
             if (Array.isArray(s)) setServers(s);
             const colors = await window.ipcRenderer?.invoke('get-setting', 'favoriteColors');
             if (Array.isArray(colors)) setFavoriteColors(colors);
-            const dg = await window.ipcRenderer?.invoke('get-setting', 'defaultGameColor');
-            const ds = await window.ipcRenderer?.invoke('get-setting', 'defaultSteamColor');
-            const da = await window.ipcRenderer?.invoke('get-setting', 'defaultAliasColor');
             const cdn = await window.ipcRenderer?.invoke('get-setting', 'enableAvatarCdn');
             if (cdn !== undefined && cdn !== null) setEnableAvatarCdn(!!cdn);
-            
             const uIp = await window.ipcRenderer?.invoke('get-setting', 'udpTargetIp');
             const uPort = await window.ipcRenderer?.invoke('get-setting', 'udpTargetPort');
             if (uIp) setUdpTargetIp(uIp);
             if (uPort) setUdpTargetPort(Number(uPort));
-
-            setDesignDefaults({ game: dg || DEFAULT_COLORS.game, steam: ds || DEFAULT_COLORS.steam, alias: da || DEFAULT_COLORS.alias });
             const icons = await window.ipcRenderer?.invoke('scan-icons');
             if (icons) setAvailableIcons(icons);
         };
@@ -127,7 +105,7 @@ function App() {
     }, []);
 
     const refreshSettings = async () => {
-        const s = await window.ipcRenderer?.invoke('get-setting', 'servers') || await window.ipcRenderer?.invoke('get-setting', 'Servers');
+        const s = await window.ipcRenderer?.invoke('get-setting', 'servers');
         if (Array.isArray(s)) setServers(s);
         const colors = await window.ipcRenderer?.invoke('get-setting', 'favoriteColors');
         if (Array.isArray(colors)) setFavoriteColors(colors);
@@ -145,26 +123,6 @@ function App() {
                 window.ipcRenderer?.send('copy-image', dataUrl);
             } catch (e) { console.error(e); } finally { setPlayerForImage(null); }
         }, 500);
-    };
-
-    const handleSetAlias = (player: Player) => setAliasModalConfig({ isOpen: true, player });
-    const handleApplyAlias = (alias: string) => {
-        if (aliasModalConfig?.player) window.ipcRenderer?.sendToBackend('SET_ALIAS', { steamId: aliasModalConfig.player.steamId64, alias });
-        setAliasModalConfig(null);
-    };
-
-    const handleSetColor = (player: Player, target: 'game' | 'steam' | 'alias') => {
-        let current = target === 'game' ? player.playerColor : (target === 'steam' ? player.personaNameColor : player.aliasColor);
-        setColorPickerConfig({ isOpen: true, initialColor: current || '#fff', targetPlayer: player, targetType: target, title: `Set ${target} color` });
-    };
-
-    const handleApplyColor = (color: string) => {
-        if (colorPickerConfig?.targetPlayer && colorPickerConfig?.targetType) {
-            window.ipcRenderer?.sendToBackend('SET_COLOR', { steamId: colorPickerConfig.targetPlayer.steamId64, color, target: colorPickerConfig.targetType });
-        } else if (activeTab === 'DB Search') {
-            dbSearchHandler(dbSearchTerm, dbSearchCaseSensitive, color, dbSearchVac, dbSearchGame, dbSearchComm, dbSearchEco);
-        }
-        setColorPickerConfig(null);
     };
 
     const handleSaveCustomization = (updated: Player) => {
@@ -230,6 +188,9 @@ function App() {
         if (!player) return [];
         if (type === 'avatar') return buildAvatarMenu(player, availableIcons, handleSetIcon);
         return buildPlayerMainMenu(player, selectedQuickTags, (tag) => setSelectedQuickTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]), setActiveTab, () => { }, servers, {
+            onSetAlias: (_p) => {}, 
+            onSetColor: (_p, _t) => {}, 
+            onCopyImage: copyImage, 
             onRefresh: handleRefresh, 
             onAddToReport: handleAddToReport,
             onCustomize: (p) => { setMenuConfig(null); setEditorModalConfig({ isOpen: true, player: p }); }
@@ -244,9 +205,19 @@ function App() {
         return (p.displayName?.toLowerCase().includes(term) || p.personaName?.toLowerCase().includes(term) || p.steamId2?.toLowerCase().includes(term));
     });
 
-    if (migrationData) return <MigrationView recordCount={migrationData.recordCount} progress={migrationData.progress} status={migrationData.status} onStart={(backup) => window.ipcRenderer?.sendToBackend('START_MIGRATION', { backup })} />;
+    if (migrationData) return (
+        <>
+            <WindowControls />
+            <MigrationView recordCount={migrationData.recordCount} progress={migrationData.progress} status={migrationData.status} onStart={(backup) => window.ipcRenderer?.sendToBackend('START_MIGRATION', { backup })} />
+        </>
+    );
 
-    if (!isAppReady) return <div className="appContainer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{initError ? <div style={{ color: 'var(--accent-red)' }}>⚠️ <h2>System Error</h2><p>{initError}</p><button onClick={() => window.location.reload()}>Restart</button></div> : <div style={{ textAlign: 'center' }}><div className="loader"></div><p style={{ marginTop: 20, color: 'var(--text-secondary)' }}>Initializing Core Engine...</p></div>}</div>;
+    if (!isAppReady) return (
+        <div className="appContainer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <WindowControls />
+            {initError ? <div style={{ color: 'var(--accent-red)' }}>⚠️ <h2>System Error</h2><p>{initError}</p><button onClick={() => window.location.reload()}>Restart</button></div> : <div style={{ textAlign: 'center' }}><div className="loader"></div><p style={{ marginTop: 20, color: 'var(--text-secondary)' }}>Initializing Core Engine...</p></div>}
+        </div>
+    );
 
     return (
         <div className="appContainer" onClick={() => setMenuConfig(null)} onContextMenu={handleInputContextMenu}>
@@ -277,21 +248,10 @@ function App() {
                         )}
                         {activeTab === 'DB Search' && (
                             <div className="scrollableContent">
-                                                                <DatabaseView
-                                                                    searchTerm={dbSearchTerm}
-                                                                    onSearchChange={dbSearchHandler}
-                                                                    players={dbResults}
-                                                                    enableAvatarCdn={enableAvatarCdn}
-                                                                    favoriteColors={favoriteColors}
-                                                                    onContextMenu={(e, p) => { e.preventDefault(); setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'main' }); }}
-                                                                    onAvatarContextMenu={(e, p) => { e.preventDefault(); e.stopPropagation(); setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'avatar' }); }}
-                                                                    vacBanned={dbSearchVac}
-                                                                    gameBanned={dbSearchGame}
-                                                                    communityBanned={dbSearchComm}
-                                                                    economyBanned={dbSearchEco}
-                                                                    caseSensitive={dbSearchCaseSensitive}
-                                                                    isLoading={isDbLoading}
-                                                                />
+                                <DatabaseView searchTerm={dbSearchTerm} onSearchChange={dbSearchHandler} players={dbResults} enableAvatarCdn={enableAvatarCdn} favoriteColors={favoriteColors}
+                                    onContextMenu={(e, p) => { e.preventDefault(); setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'main' }); }}
+                                    onAvatarContextMenu={(e, p) => { e.preventDefault(); e.stopPropagation(); setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'avatar' }); }}
+                                    vacBanned={dbSearchVac} gameBanned={dbSearchGame} communityBanned={dbSearchComm} economyBanned={dbSearchEco} caseSensitive={dbSearchCaseSensitive} isLoading={isDbLoading} />
                             </div>
                         )}
                         {activeTab === 'Report' && <div className="scrollableContent"><ReportView allPlayers={players} reportTargets={reportTargets} onAddTarget={handleAddToReport} onRemoveTarget={handleRemoveFromReport} servers={servers} onUpdateServers={handleUpdateServers} onReportChange={setReportData} /></div>}
@@ -301,9 +261,7 @@ function App() {
                 </div>
             </div>
             {playerForImage && <ShareablePlayerCard player={playerForImage} />}
-            {colorPickerConfig?.isOpen && <ColorPickerModal isOpen={true} onClose={() => setColorPickerConfig(null)} initialColor={colorPickerConfig.initialColor} onApply={handleApplyColor} title={colorPickerConfig.title} />}
             {editorModalConfig?.isOpen && <PlayerEditorModal isOpen={true} onClose={() => setEditorModalConfig(null)} player={editorModalConfig.player} favoriteColors={favoriteColors} onSave={handleSaveCustomization} />}
-            <AliasModal isOpen={!!aliasModalConfig?.isOpen} player={aliasModalConfig?.player || null} onClose={() => setAliasModalConfig(null)} onApply={handleApplyAlias} />
             {menuConfig && <ContextMenu x={menuConfig.x} y={menuConfig.y} items={menuItems} onClose={() => setMenuConfig(null)} />}
         </div>
     )
