@@ -33,6 +33,11 @@ function App() {
     const [dbSearchTerm, setDbSearchTerm] = useState('');
     const [dbSearchCaseSensitive, setDbSearchCaseSensitive] = useState(false);
     const [dbSearchColor, setDbSearchColor] = useState<string | null>(null);
+    const [dbSearchVac, setDbSearchVac] = useState(false);
+    const [dbSearchGame, setDbSearchGame] = useState(false);
+    const [dbSearchComm, setDbSearchComm] = useState(false);
+    const [dbSearchEco, setDbSearchEco] = useState(false);
+    const [isDbLoading, setIsDbLoading] = useState(false); // UI Feedback
 
     const [players, setPlayers] = useState<Player[]>([]);
     const [dbResults, setDbResults] = useState<Player[]>([]);
@@ -88,7 +93,10 @@ function App() {
                     setPlayers(prev => updater(prev));
                     setDbResults(prev => updater(prev));
                     break;
-                case 'SEARCH_RESULT': setDbResults(msg.data.players || []); break;
+                case 'SEARCH_RESULT': 
+                    setDbResults(msg.data.players || []); 
+                    setIsDbLoading(false);
+                    break;
             }
         });
 
@@ -214,7 +222,7 @@ function App() {
             });
         } else if (activeTab === 'DB Search') {
             // If no target player, it's a search filter
-            dbSearchHandler(dbSearchTerm, dbSearchCaseSensitive, color);
+            dbSearchHandler(dbSearchTerm, dbSearchCaseSensitive, color, dbSearchVac, dbSearchGame, dbSearchComm, dbSearchEco);
         }
         setColorPickerConfig(null);
     };
@@ -255,7 +263,6 @@ function App() {
         text = text.replace(/\${ServerName}/g, server).replace(/\${PlayerName}/g, pNames).replace(/\${SteamId}/g, sIds).replace(/\${Details}/g, det);
         navigator.clipboard.writeText(text);
         setCopyStatus('Copied!');
-        setTimeout(() => setCopyStatus('Copy Report'), 2000);
     }, [reportData, reportTargets]);
 
     const handleInputContextMenu = (e: React.MouseEvent) => {
@@ -266,33 +273,39 @@ function App() {
         }
     };
 
-    const dbSearchHandler = (t: string, caseSensitive: boolean = false, color: string | null = null) => {
+    const dbSearchHandler = (t: string, caseSensitive: boolean, color: string | null, vac: boolean, game: boolean, comm: boolean, eco: boolean) => {
         setDbSearchTerm(t);
         setDbSearchCaseSensitive(caseSensitive);
         setDbSearchColor(color);
+        setDbSearchVac(vac);
+        setDbSearchGame(game);
+        setDbSearchComm(comm);
+        setDbSearchEco(eco);
     };
 
     // Debounce DB Search
     useEffect(() => {
         const timer = setTimeout(() => {
-            // HYBRID LOGIC: If a color is selected, we only query the DB for the color ONE TIME.
-            // Text filtering within that color set is done locally in DatabaseView.tsx.
-            const shouldQueryDb = dbSearchColor
-                ? (dbResults.length === 0 || dbResults[0]?.playerColor !== dbSearchColor && dbResults[0]?.personaNameColor !== dbSearchColor)
-                : (dbSearchTerm && dbSearchTerm.trim().length > 0);
+            const hasFilters = dbSearchColor || dbSearchVac || dbSearchGame || dbSearchComm || dbSearchEco;
+            const shouldQueryDb = hasFilters || (dbSearchTerm && dbSearchTerm.trim().length > 0);
 
-            if (shouldQueryDb || (dbSearchColor && dbResults.length === 0)) {
+            if (shouldQueryDb) {
+                setIsDbLoading(true);
                 window.ipcRenderer?.sendToBackend('SEARCH_DB', {
-                    t: dbSearchColor ? "" : dbSearchTerm, // Only send text if no color selected, or let backend handle combined
+                    t: dbSearchTerm,
                     caseSensitive: dbSearchCaseSensitive,
-                    color: dbSearchColor
+                    color: dbSearchColor,
+                    vacBanned: dbSearchVac,
+                    gameBanned: dbSearchGame,
+                    communityBanned: dbSearchComm,
+                    economyBanned: dbSearchEco
                 });
-            } else if (!dbSearchTerm && !dbSearchColor) {
+            } else if (!dbSearchTerm && !hasFilters) {
                 setDbResults([]);
             }
         }, 300);
         return () => clearTimeout(timer);
-    }, [dbSearchTerm, dbSearchCaseSensitive, dbSearchColor]);
+    }, [dbSearchTerm, dbSearchCaseSensitive, dbSearchColor, dbSearchVac, dbSearchGame, dbSearchComm, dbSearchEco]);
 
     const menuItems = useMemo(() => {
         if (!menuConfig) return [];
@@ -385,6 +398,12 @@ function App() {
                                     onContextMenu={(e, p) => setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'main' })}
                                     onAvatarContextMenu={(e, p) => setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'avatar' })}
                                     onPickCustomColor={() => setColorPickerConfig({ isOpen: true, initialColor: '#3b82f6' })}
+                                    vacBanned={dbSearchVac}
+                                    gameBanned={dbSearchGame}
+                                    communityBanned={dbSearchComm}
+                                    economyBanned={dbSearchEco}
+                                    caseSensitive={dbSearchCaseSensitive}
+                                    isLoading={isDbLoading}
                                 />
                             </div>
                         )}

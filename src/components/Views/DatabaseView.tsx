@@ -6,13 +6,19 @@ import { Search, SortAsc, Plus } from 'lucide-react';
 
 interface DatabaseViewProps {
     searchTerm: string;
-    onSearchChange: (term: string, caseSensitive: boolean, color: string | null) => void;
+    onSearchChange: (term: string, caseSensitive: boolean, color: string | null, vac: boolean, game: boolean, comm: boolean, eco: boolean) => void;
     players: Player[];
     favoriteColors: string[];
     onContextMenu: (e: React.MouseEvent, player: Player) => void;
     onAvatarContextMenu: (e: React.MouseEvent, player: Player) => void;
     onPickCustomColor: () => void;
     enableAvatarCdn?: boolean;
+    vacBanned: boolean;
+    gameBanned: boolean;
+    communityBanned: boolean;
+    economyBanned: boolean;
+    caseSensitive: boolean;
+    isLoading?: boolean;
 }
 
 const MOCK_COLORS = ['#ff4444', '#66ccff', '#ffd700', '#10b981', '#a855f7'];
@@ -25,10 +31,15 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     onContextMenu,
     onAvatarContextMenu,
     onPickCustomColor,
-    enableAvatarCdn = true
+    enableAvatarCdn = true,
+    vacBanned,
+    gameBanned,
+    communityBanned,
+    economyBanned,
+    caseSensitive,
+    isLoading = false
 }) => {
     const [exactMatch, setExactMatch] = useState(false);
-    const [caseSensitive, setCaseSensitive] = useState(false);
     const [selectedColor, setSelectedColor] = useState<string | null>(null);
     const [sortBy, setSortBy] = useState('last_updated');
 
@@ -211,8 +222,12 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
 
 
 
-                <div className={styles.resultsList}>
-
+                <div className={styles.resultsList} style={{ opacity: isLoading ? 0.5 : 1, transition: 'opacity 0.2s', pointerEvents: isLoading ? 'none' : 'auto' }}>
+                    {isLoading && (
+                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 10 }}>
+                            <div className="loader"></div>
+                        </div>
+                    )}
                     {filteredResults.length > 0 ? (
 
                         <div className="cardGrid">
@@ -264,7 +279,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
                         placeholder="Search name or SteamID..."
                         value={searchTerm}
                         onChange={(e) => {
-                            onSearchChange(e.target.value, caseSensitive, selectedColor);
+                            onSearchChange(e.target.value, caseSensitive, selectedColor, vacBanned, gameBanned, communityBanned, economyBanned);
                         }}
                     />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -283,8 +298,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
                                 className={styles.checkbox}
                                 checked={caseSensitive}
                                 onChange={(e) => {
-                                    setCaseSensitive(e.target.checked);
-                                    onSearchChange(searchTerm, e.target.checked, selectedColor);
+                                    onSearchChange(searchTerm, e.target.checked, selectedColor, vacBanned, gameBanned, communityBanned, economyBanned);
                                 }}
                             />
                             Case Sensitive
@@ -300,7 +314,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
                             style={{ background: 'linear-gradient(45deg, #333, #666)' }}
                             onClick={() => {
                                 setSelectedColor(null);
-                                onSearchChange(searchTerm, caseSensitive, null);
+                                onSearchChange(searchTerm, caseSensitive, null, vacBanned, gameBanned, communityBanned, economyBanned);
                             }}
                             title="All colors"
                         />
@@ -311,7 +325,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
                                 style={{ backgroundColor: c }}
                                 onClick={() => {
                                     setSelectedColor(c);
-                                    onSearchChange(searchTerm, caseSensitive, c);
+                                    onSearchChange(searchTerm, caseSensitive, c, vacBanned, gameBanned, communityBanned, economyBanned);
                                 }}
                             />
                         ))}
@@ -327,8 +341,38 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
 
                 <div className={styles.section}>
                     <span className={styles.sectionTitle}>Ban Status</span>
-                    <label className={styles.checkboxLabel}><input type="checkbox" className={styles.checkbox} /> Only VAC Banned</label>
-                    <label className={styles.checkboxLabel}><input type="checkbox" className={styles.checkbox} /> Only Game Banned</label>
+                    <label className={styles.checkboxLabel}>
+                        <input 
+                            type="checkbox" 
+                            className={styles.checkbox} 
+                            checked={vacBanned}
+                            onChange={(e) => onSearchChange(searchTerm, caseSensitive, selectedColor, e.target.checked, gameBanned, communityBanned, economyBanned)}
+                        /> VAC Banned
+                    </label>
+                    <label className={styles.checkboxLabel}>
+                        <input 
+                            type="checkbox" 
+                            className={styles.checkbox} 
+                            checked={gameBanned}
+                            onChange={(e) => onSearchChange(searchTerm, caseSensitive, selectedColor, vacBanned, e.target.checked, communityBanned, economyBanned)}
+                        /> Game Banned
+                    </label>
+                    <label className={styles.checkboxLabel}>
+                        <input 
+                            type="checkbox" 
+                            className={styles.checkbox} 
+                            checked={communityBanned}
+                            onChange={(e) => onSearchChange(searchTerm, caseSensitive, selectedColor, vacBanned, gameBanned, e.target.checked, economyBanned)}
+                        /> Community Banned
+                    </label>
+                    <label className={styles.checkboxLabel}>
+                        <input 
+                            type="checkbox" 
+                            className={styles.checkbox} 
+                            checked={economyBanned}
+                            onChange={(e) => onSearchChange(searchTerm, caseSensitive, selectedColor, vacBanned, gameBanned, communityBanned, e.target.checked)}
+                        /> Economy Banned
+                    </label>
                 </div>
             </aside>
         </div>

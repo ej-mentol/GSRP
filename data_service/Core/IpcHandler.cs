@@ -67,7 +67,12 @@ namespace GSRP.Daemon.Core
                                 bool cs = payload.TryGetProperty("caseSensitive", out var csProp) && csProp.GetBoolean();
                                 var color = payload.TryGetProperty("color", out var cProp) ? cProp.GetString() : null;
                                 
-                                var results = await _storage.SearchPlayersAsync(term, cs, color);
+                                bool vac = payload.TryGetProperty("vacBanned", out var vP) && vP.GetBoolean();
+                                bool game = payload.TryGetProperty("gameBanned", out var gP) && gP.GetBoolean();
+                                bool comm = payload.TryGetProperty("communityBanned", out var cmP) && cmP.GetBoolean();
+                                bool eco = payload.TryGetProperty("economyBanned", out var eP) && eP.GetBoolean();
+                                
+                                var results = await _storage.SearchPlayersAsync(term, cs, color, vac, game, comm, eco);
                                 _sendToElectron("SEARCH_RESULT", new SearchResultsData(results));
                             }
                         }

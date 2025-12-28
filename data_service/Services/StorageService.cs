@@ -63,7 +63,7 @@ namespace GSRP.Daemon.Services
             });
         }
 
-        public async Task<List<Player>> SearchPlayersAsync(string term, bool caseSensitive = false, string? colorFilter = null)
+        public async Task<List<Player>> SearchPlayersAsync(string term, bool caseSensitive = false, string? colorFilter = null, bool vacBanned = false, bool gameBanned = false, bool communityBanned = false, bool economyBanned = false)
         {
             return await Task.Run(() => {
                 var results = new List<Player>();
@@ -73,7 +73,7 @@ namespace GSRP.Daemon.Services
                     var cmd = conn.CreateCommand();
                     
                     string searchId64 = "";
-                    if (term.StartsWith("STEAM_", StringComparison.OrdinalIgnoreCase)) {
+                    if (!string.IsNullOrEmpty(term) && term.StartsWith("STEAM_", StringComparison.OrdinalIgnoreCase)) {
                         try {
                             var parts = term.Split(':');
                             if (parts.Length == 3) {
@@ -85,6 +85,8 @@ namespace GSRP.Daemon.Services
                     }
 
                     List<string> conditions = new List<string>();
+                    
+                    // 1. Text Search
                     if (!string.IsNullOrEmpty(term)) {
                         if (caseSensitive) conditions.Add("(steam_id64 = @id64 OR steam_id64 LIKE @t OR alias LIKE @t OR personaname LIKE @t)");
                         else conditions.Add("(steam_id64 = @id64 OR LOWER(steam_id64) LIKE LOWER(@t) OR LOWER(alias) LIKE LOWER(@t) OR LOWER(personaname) LIKE LOWER(@t))");
@@ -92,15 +94,24 @@ namespace GSRP.Daemon.Services
                         cmd.Parameters.AddWithValue("@id64", searchId64);
                     }
 
+                    // 2. Color Filter (Case Insensitive)
                     if (!string.IsNullOrEmpty(colorFilter)) {
-                        conditions.Add("(txt_color = @c OR stm_color = @c OR alias_color = @c)");
+                        conditions.Add("(txt_color = @c COLLATE NOCASE OR stm_color = @c COLLATE NOCASE OR alias_color = @c COLLATE NOCASE)");
                         cmd.Parameters.AddWithValue("@c", colorFilter);
                     }
 
+                    // 3. Ban Filters
+                    if (vacBanned) conditions.Add("number_of_vac_bans > 0");
+                    if (gameBanned) conditions.Add("number_of_game_bans > 0");
+                    if (communityBanned) conditions.Add("is_community_banned = 1");
+                    if (economyBanned) conditions.Add("(economy_ban IS NOT NULL AND economy_ban != 'none' AND economy_ban != '0')");
+
                     if (conditions.Count == 0) return results;
 
-                    // If we only have a color filter, fetch more records for frontend sub-filtering
-                    int limit = string.IsNullOrEmpty(term) && !string.IsNullOrEmpty(colorFilter) ? 5000 : 2000;
+                    // Limit logic: If specialized filters are active, allow more results to support client-side browsing
+                    bool hasFilters = !string.IsNullOrEmpty(colorFilter) || vacBanned || gameBanned || communityBanned || economyBanned;
+                    int limit = hasFilters ? 5000 : 2000;
+                    
                     cmd.CommandText = "SELECT * FROM players WHERE " + string.Join(" AND ", conditions) + $" LIMIT {limit}";
                     
                     using var reader = cmd.ExecuteReader();
