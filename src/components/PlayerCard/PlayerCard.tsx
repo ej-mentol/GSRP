@@ -149,7 +149,6 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                         style={{ opacity: 1 }}
                         onError={handleImgError}
                         loading="lazy"
-                        crossOrigin="anonymous"
                     />
                 ) : (
                     <div className={styles.avatarFallback}>{getInitials(player.displayName)}</div>

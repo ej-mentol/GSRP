@@ -173,12 +173,16 @@
     height: 24px;
     border-radius: 50%;
     cursor: pointer;
-    border: 2px solid transparent;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    background-clip: padding-box;
+    -webkit-background-clip: padding-box;
+    box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.06);
 }
 
 .colorItemActive {
-    border-color: #fff;
-    box-shadow: 0 0 0 2px var(--accent-blue);
+    box-shadow: 0 0 0 2px var(--bg-sidebar), 0 0 0 4px var(--accent-blue);
+    transform: scale(1.12);
+    z-index: 1;
 }
 
 .addColorItem {

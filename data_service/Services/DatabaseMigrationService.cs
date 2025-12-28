@@ -36,12 +36,14 @@ namespace GSRP.Daemon.Services
                      OR (alias_color IN ('0', ''))",
                 @"UPDATE players SET txt_color = NULL WHERE txt_color IN ('0', '');
                   UPDATE players SET stm_color = NULL WHERE stm_color IN ('0', '');
-                  UPDATE players SET alias_color = NULL WHERE alias_color IN ('0', '');"
+                  UPDATE players SET alias_color = NULL WHERE alias_color IN ('0', '');",
+                false // DISABLED: '0' might be used by frontend
             ),
             new MigrationRule(
                 "Economy: Cleanup 'none' and '0' markers",
                 "SELECT COUNT(*) FROM players WHERE economy_ban IN ('none', '0', '')",
-                "UPDATE players SET economy_ban = NULL WHERE economy_ban IN ('none', '0', '');"
+                "UPDATE players SET economy_ban = NULL WHERE economy_ban IN ('none', '0', '');",
+                false // DISABLED: We now use 'none' explicitly
             )
         };
 

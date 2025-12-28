@@ -98,10 +98,57 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    border: 2px solid transparent;
+    border: 2px solid transparent; /* Keep border for spacing if needed, or remove and use shadow */
     cursor: pointer;
     transition: transform 0.1s;
     position: relative;
+    background-clip: padding-box;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+}
+
+/* ... */
+
+.hexInputGroup {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.hexInputWrapper {
+    position: relative;
+    flex: 1;
+}
+
+.hexInput {
+    background-color: var(--bg-sidebar);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    padding: 8px 8px 8px 24px; /* Space for hash */
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    width: 100%;
+    outline: none;
+    text-transform: uppercase;
+}
+
+.hexInput:focus {
+    border-color: var(--accent-blue);
+}
+
+.hexHash {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 12px;
+    pointer-events: none;
+}
+
+.gradientArrow {
+    color: var(--text-muted);
 }
 
 .colorBtn:hover {

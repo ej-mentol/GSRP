@@ -34,29 +34,15 @@ export const ShareablePlayerCard = forwardRef<HTMLDivElement, ShareableCardProps
 
     if (!player) return null;
 
-    // Use local cache protocol to avoid CORS during capture
-    const avatarUrl = player.avatarHash && player.avatarHash.length > 5 && player.avatarHash !== "0"
-        ? `gsrp-cache://${player.avatarHash}.jpg`
-        : null;
-
-    const showFallback = !avatarUrl || imgError;
+    // Always use fallback to avoid CORS issues during export
+    // const avatarUrl = ... 
 
     return (
         <div className={styles.shareCard} ref={ref} id="shareable-card">
             <div className={styles.avatarContainer}>
-                {showFallback ? (
-                    <div className={styles.avatar} style={{ backgroundColor: '#27272a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 'bold' }}>
-                        {player.displayName?.substring(0, 2).toUpperCase() || '??'}
-                    </div>
-                ) : (
-                    <img
-                        src={avatarUrl}
-                        className={styles.avatar}
-                        alt="avatar"
-                        crossOrigin="anonymous"
-                        onError={() => setImgError(true)}
-                    />
-                )}
+                <div className={styles.avatar} style={{ backgroundColor: '#27272a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 'bold' }}>
+                    {player.displayName?.substring(0, 2).toUpperCase() || '??'}
+                </div>
             </div>
 
             <div className={styles.info}>

@@ -318,17 +318,29 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
                             }}
                             title="All colors"
                         />
-                        {(favoriteColors && favoriteColors.length > 0 ? favoriteColors : MOCK_COLORS).map(c => (
-                            <div
-                                key={c}
-                                className={`${styles.colorItem} ${selectedColor === c ? styles.colorItemActive : ''}`}
-                                style={{ backgroundColor: c }}
-                                onClick={() => {
-                                    setSelectedColor(c);
-                                    onSearchChange(searchTerm, caseSensitive, c, vacBanned, gameBanned, communityBanned, economyBanned);
-                                }}
-                            />
-                        ))}
+                        {(favoriteColors && favoriteColors.length > 0 ? favoriteColors : MOCK_COLORS).map(c => {
+                            const style = (() => {
+                                if (c.includes(';')) {
+                                    const [a, b] = c.split(';');
+                                    return { background: `radial-gradient(circle at 30% 25%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 8%, transparent 40%), linear-gradient(135deg, ${a}, ${b})` };
+                                } else {
+                                    return { background: `radial-gradient(circle at 30% 25%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 8%, transparent 40%), ${c}` };
+                                }
+                            })();
+                            
+                            return (
+                                <div
+                                    key={c}
+                                    className={`${styles.colorItem} ${selectedColor === c ? styles.colorItemActive : ''}`}
+                                    style={style}
+                                    onClick={() => {
+                                        setSelectedColor(c);
+                                        onSearchChange(searchTerm, caseSensitive, c, vacBanned, gameBanned, communityBanned, economyBanned);
+                                    }}
+                                    title={c}
+                                />
+                            );
+                        })}
                         <div
                             className={styles.addColorItem}
                             onClick={onPickCustomColor}
