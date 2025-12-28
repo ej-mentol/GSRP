@@ -27,6 +27,17 @@ html {
   --accent-orange: #f97316;
   --accent-purple: #a855f7;
   --accent-green: #10b981;
+
+  /* Z-Index Layers */
+  --z-base: 1;
+  --z-sidebar: 50;
+  --z-header: 60;
+  --z-controls: 100;
+  --z-dropdown: 500; /* Local dropdowns */
+  --z-modal: 1000;
+  --z-context-menu: 1500; /* Global context menus */
+  --z-tooltip: 2000;
+  --z-max: 9999;
 }
 
 body {

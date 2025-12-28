@@ -1,6 +1,6 @@
 .menu {
     position: fixed;
-    z-index: 25000;
+    z-index: var(--z-context-menu);
     background-color: #1c1c1f;
     border: 1px solid var(--border-bright);
     border-radius: 10px;

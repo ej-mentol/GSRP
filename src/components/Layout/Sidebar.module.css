@@ -5,7 +5,7 @@
     border-right: 1px solid var(--border-subtle);
     display: flex;
     flex-direction: column;
-    z-index: 50;
+    z-index: var(--z-sidebar);
     -webkit-app-region: drag;
 }
 
