@@ -11,17 +11,19 @@ namespace GSRP.Daemon.Core
     public class IpcHandler
     {
         private readonly StorageService _storage;
-        private readonly DatabaseMigrationService _migration; // New
+        private readonly DatabaseMigrationService _migration;
         private readonly SteamApiService _steamApi;
         private readonly EnrichmentCoordinator _coordinator;
+        private readonly UdpConsoleService _udp; // New
         private readonly Action<string, object?> _sendToElectron;
 
-        public IpcHandler(StorageService storage, DatabaseMigrationService migration, SteamApiService steamApi, EnrichmentCoordinator coordinator, Action<string, object?> sendToElectron)
+        public IpcHandler(StorageService storage, DatabaseMigrationService migration, SteamApiService steamApi, EnrichmentCoordinator coordinator, UdpConsoleService udp, Action<string, object?> sendToElectron)
         {
             _storage = storage;
             _migration = migration;
             _steamApi = steamApi;
             _coordinator = coordinator;
+            _udp = udp;
             _sendToElectron = sendToElectron;
         }
 
@@ -121,6 +123,17 @@ namespace GSRP.Daemon.Core
                         {
                             var key = doc.RootElement.GetProperty("payload").GetProperty("key").GetString();
                             if (!string.IsNullOrEmpty(key)) _steamApi.SaveApiKey(key);
+                        }
+                        break;
+
+                    case "SEND_UDP":
+                        {
+                            if (doc.RootElement.TryGetProperty("payload", out var payload)) {
+                                var ip = payload.GetProperty("ip").GetString() ?? "127.0.0.1";
+                                var port = payload.GetProperty("port").GetInt32();
+                                var msg = payload.GetProperty("message").GetString() ?? "";
+                                if (!string.IsNullOrEmpty(msg)) await _udp.SendMessageAsync(ip, port, msg);
+                            }
                         }
                         break;
                 }

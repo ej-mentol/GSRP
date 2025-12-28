@@ -67,8 +67,9 @@ function App() {
     const [aliasModalConfig, setAliasModalConfig] = useState<{ isOpen: boolean, player: Player | null } | null>(null);
 
     const [menuConfig, setMenuConfig] = useState<{ x: number, y: number, player?: Player, type: 'main' | 'avatar' | 'input', element?: any } | null>(null);
+    const [udpTargetIp, setUdpTargetIp] = useState('127.0.0.1');
+    const [udpTargetPort, setUdpTargetPort] = useState(26001);
     const [selectedQuickTags, setSelectedQuickTags] = useState<string[]>([]);
-
     const [playerForImage, setPlayerForImage] = useState<Player | null>(null);
 
     useEffect(() => {
@@ -116,6 +117,12 @@ function App() {
             const da = await window.ipcRenderer?.invoke('get-setting', 'defaultAliasColor');
             const cdn = await window.ipcRenderer?.invoke('get-setting', 'enableAvatarCdn');
             if (cdn !== undefined && cdn !== null) setEnableAvatarCdn(!!cdn);
+            
+            const uIp = await window.ipcRenderer?.invoke('get-setting', 'udpTargetIp');
+            const uPort = await window.ipcRenderer?.invoke('get-setting', 'udpTargetPort');
+            if (uIp) setUdpTargetIp(uIp);
+            if (uPort) setUdpTargetPort(Number(uPort));
+
             setDesignDefaults({
                 game: dg || DEFAULT_COLORS.game,
                 steam: ds || DEFAULT_COLORS.steam,
@@ -417,7 +424,7 @@ function App() {
                                 <SettingsView onSettingsSaved={refreshSettings} />
                             </div>
                         )}
-                        {activeTab === 'Console' && <ConsoleView />}
+                        {activeTab === 'Console' && <ConsoleView targetIp={udpTargetIp} targetPort={udpTargetPort} />}
                     </main>
                 </div>
             </div>

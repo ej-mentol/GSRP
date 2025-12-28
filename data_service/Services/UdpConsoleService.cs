@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using GSRP.Daemon.Core;
 
 namespace GSRP.Daemon.Services
 {
@@ -30,11 +31,11 @@ namespace GSRP.Daemon.Services
                 _cts = new CancellationTokenSource();
                 _isListening = true;
                 _ = Task.Run(() => ReceiveLoop(_cts.Token));
-                _sendToElectron("CONSOLE_LOG", new { Tag = "SYS", Text = $"UDP Listener started on port {port}" });
+                _sendToElectron("CONSOLE_LOG", new LogData("SYS", $"UDP Listener started on port {port}"));
             }
             catch (Exception ex)
             {
-                _sendToElectron("CONSOLE_LOG", new { Tag = "SYS", Text = $"Failed to start UDP: {ex.Message}" });
+                _sendToElectron("CONSOLE_LOG", new LogData("SYS", $"Failed to start UDP: {ex.Message}"));
             }
         }
 
@@ -66,6 +67,7 @@ namespace GSRP.Daemon.Services
 
                     switch (firstByte)
                     {
+                        case 0x01: tag = "LOG"; break;
                         case 0x02: tag = "CHAT"; break;
                         case 0x03: tag = "GAME"; break;
                         case 0x04: tag = "NET"; break;
@@ -89,7 +91,7 @@ namespace GSRP.Daemon.Services
 
                     if (!string.IsNullOrEmpty(text))
                     {
-                        _sendToElectron("CONSOLE_LOG", new { Tag = tag, Text = text });
+                        _sendToElectron("CONSOLE_LOG", new LogData(tag, text));
                     }
                 }
                 catch (OperationCanceledException) { break; }
@@ -97,7 +99,7 @@ namespace GSRP.Daemon.Services
                 catch (Exception ex)
                 {
                     if (_isListening)
-                        _sendToElectron("CONSOLE_LOG", new { Tag = "SYS", Text = $"UDP Error: {ex.Message}" });
+                        _sendToElectron("CONSOLE_LOG", new LogData("SYS", $"UDP Error: {ex.Message}"));
                 }
             }
         }
@@ -109,23 +111,25 @@ namespace GSRP.Daemon.Services
                 using var client = new UdpClient();
                 var data = Encoding.UTF8.GetBytes(message);
                 await client.SendAsync(data, data.Length, ip, port);
-                _sendToElectron("CONSOLE_LOG", new { Tag = "USER", Text = message });
+                _sendToElectron("CONSOLE_LOG", new LogData("USER", message));
             }
             catch (Exception ex)
             {
-                _sendToElectron("CONSOLE_LOG", new { Tag = "SYS", Text = $"Send Error: {ex.Message}" });
+                _sendToElectron("CONSOLE_LOG", new LogData("SYS", $"Send Error: {ex.Message}"));
             }
         }
 
         private string Sanitize(string input)
         {
-            // Simple sanitization: remove non-printable chars except formatting
-            // We keep GoldSource color codes (0x01-0x04) if needed, but for now lets strip standard control chars
-            // The Python script logic: 32 <= c <= 126 OR \n \r \t
+            // Professional Sanitization:
+            // Allow Printable ASCII (32-126)
+            // Allow all Unicode (c > 127) for Cyrillic/International support
+            // Allow GoldSource color codes (0x01-0x04)
+            // Allow standard whitespace (\n, \r, \t)
             var sb = new StringBuilder(input.Length);
             foreach (char c in input)
             {
-                if ((c >= 32 && c <= 126) || c == '\n' || c == '\r' || c == '\t' || (c >= 0x01 && c <= 0x04)) // Keep colors too? Python kept them visualized or stripped.
+                if (c >= 32 || c == '\n' || c == '\r' || c == '\t' || (c >= 0x01 && c <= 0x04))
                 {
                     sb.Append(c);
                 }

@@ -43,8 +43,8 @@ namespace GSRP.Daemon
             // UdpConsoleService expects (Action<string, object?>)
             _udpService = new UdpConsoleService(SendToElectron);
             
-            // IpcHandler expects (StorageService, DatabaseMigrationService, SteamApiService, EnrichmentCoordinator, Action<string, object?>)
-            _ipcHandler = new IpcHandler(_storage, _migration, _steamApi, _coordinator, SendToElectron);
+            // IpcHandler expects (StorageService, DatabaseMigrationService, SteamApiService, EnrichmentCoordinator, UdpConsoleService, Action<string, object?>)
+            _ipcHandler = new IpcHandler(_storage, _migration, _steamApi, _coordinator, _udpService, SendToElectron);
             
             _parser = new PlayerParser();
             _clipboard = new ClipboardMonitor();

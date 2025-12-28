@@ -155,8 +155,8 @@ namespace GSRP.Daemon.Services
                 IsCommunityBanned = !reader.IsDBNull(Get("is_community_banned")) && reader.GetInt32(Get("is_community_banned")) == 1,
                 NumberOfVacBans = (int)reader.GetInt64(Get("number_of_vac_bans")),
                 NumberOfGameBans = (int)reader.GetInt64(Get("number_of_game_bans")),
-                LastVacCheck = reader.IsDBNull(Get("last_vac_check")) ? null : reader.GetInt64(Get("last_vac_check")),
-                EconomyBan = GetStr("economy_ban"),
+                LastVacCheck = reader.IsDBNull(Get("last_vac_check")) ? 0 : reader.GetInt64(Get("last_vac_check")),
+                EconomyBan = GetStr("economy_ban") ?? "none",
                 BanDate = reader.GetInt64(Get("ban_date")),
                 AliasColor = GetStr("alias_color")
             };

@@ -90,10 +90,35 @@
 .tagSYS   { color: var(--accent-blue); }
 .tagSTUFF { color: var(--accent-green); }
 .tagRAW   { color: var(--text-muted); }
+.tagLOG   { color: var(--text-secondary); opacity: 0.8; }
 .tagUSER  { color: var(--accent-steam); font-style: italic; }
+.scrollDownButton {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--accent-blue);
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+    opacity: 0.9;
+    transition: all 0.2s;
+}
 
-.text {
-    color: var(--text-primary);
+.scrollDownButton:hover {
+    transform: translateX(-50%) translateY(-2px);
+    opacity: 1;
+}
+
+.tagList {
+    display: flex;
+    gap: 4px;
 }
 
 .nonPrintable {

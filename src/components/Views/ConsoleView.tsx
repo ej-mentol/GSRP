@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import styles from './ConsoleView.module.css';
 import { Trash2, ChevronRight } from 'lucide-react';
 
-type LogTag = 'CHAT' | 'GAME' | 'NET' | 'SYS' | 'STUFF' | 'RAW' | 'USER';
+type LogTag = 'CHAT' | 'GAME' | 'NET' | 'SYS' | 'STUFF' | 'RAW' | 'USER' | 'LOG';
 
 interface LogMessage {
     id: number;
@@ -12,7 +12,7 @@ interface LogMessage {
     receivedAt: number;
 }
 
-const TAG_ORDER: LogTag[] = ['SYS', 'NET', 'GAME', 'CHAT', 'STUFF', 'USER', 'RAW'];
+const TAG_ORDER: LogTag[] = ['SYS', 'NET', 'GAME', 'CHAT', 'STUFF', 'USER', 'LOG', 'RAW'];
 
 // GoldSource Color Mapping
 const GS_COLORS: Record<number, string> = {
@@ -21,37 +21,40 @@ const GS_COLORS: Record<number, string> = {
     0x04: '#10b981',               // Green
 };
 
-export const ConsoleView: React.FC = () => {
+interface ConsoleViewProps {
+    targetIp?: string;
+    targetPort?: number;
+}
+
+export const ConsoleView: React.FC<ConsoleViewProps> = ({
+    targetIp = '127.0.0.1',
+    targetPort = 26001
+}) => {
     const [messages, setMessages] = useState<LogMessage[]>([
-        { id: 1, timestamp: '19:10:01', tags: new Set(['SYS']), text: 'GoldSource MetaHookSV Console Ready', receivedAt: Date.now() },
+        { id: 1, timestamp: new Date().toLocaleTimeString('ru-RU', { hour12: false }), tags: new Set(['SYS']), text: 'Console Integrated & Connected', receivedAt: Date.now() },
     ]);
     
     const [visibleTags, setVisibleTags] = useState<Set<LogTag>>(new Set(['CHAT', 'GAME', 'NET', 'SYS', 'STUFF', 'RAW', 'USER']));
     const [inputValue, setInputValue] = useState('');
     const [history, setHistory] = useState<string[]>([]);
     const [historyIndex, setHistoryIndex] = useState(-1);
+    const [autoScroll, setAutoScroll] = useState(true);
     const logEndRef = useRef<HTMLDivElement>(null);
+    const logAreaRef = useRef<HTMLDivElement>(null);
 
-    // From Python script
-    const AUTOCOMPLETE_OPTIONS = [
-        "say ", "status", "echo ", "connect ", "disconnect", "quit", "name ", 
-        "map ", "retry", "kill", "say_team ", "snapshot", "clear"
-    ];
+    // ... (intermediate code) ...
 
-    useEffect(() => {
-        // Listen for Backend Console Logs
-        const remove = window.ipcRenderer?.onBackend((msg) => {
-            if (msg.type === 'CONSOLE_LOG') {
-                const tag = msg.data.Tag || msg.data.tag;
-                const text = msg.data.Text || msg.data.text;
-                if (text) addMessage(text, tag as LogTag);
-            }
-        });
-        return () => remove?.();
-    }, []);
+    const handleScroll = () => {
+        if (!logAreaRef.current) return;
+        const { scrollTop, scrollHeight, clientHeight } = logAreaRef.current;
+        const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
+        setAutoScroll(isAtBottom);
+    };
 
     useEffect(() => {
-        logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (autoScroll) {
+            logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
     }, [messages, visibleTags]);
 
     const addMessage = (text: string, tag: LogTag) => {
@@ -71,13 +74,15 @@ export const ConsoleView: React.FC = () => {
                 return updated;
             }
 
-            return [...prev, {
+            // Limit message history to prevent UI lag (e.g. 1000 items)
+            const next = [...prev, {
                 id: now + Math.random(),
                 timestamp: new Date().toLocaleTimeString('ru-RU', { hour12: false }),
                 tags: new Set([tag]),
                 text: text,
                 receivedAt: now
             }];
+            return next.slice(-1000);
         });
     };
 
@@ -92,17 +97,16 @@ export const ConsoleView: React.FC = () => {
         setHistoryIndex(-1);
 
         // Send to Backend
-        // We need settings for IP/Port, for now assume localhost default from mock
-        // Ideally, ConsoleView should receive settings props
         window.ipcRenderer?.sendToBackend('SEND_UDP', { 
-            ip: '127.0.0.1', 
-            port: 26001, 
+            ip: targetIp, 
+            port: targetPort, 
             message: text 
         });
 
         // Optimistic local add
         addMessage(text, 'USER');
         setInputValue('');
+        setAutoScroll(true); // Always scroll on user command
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -175,7 +179,7 @@ export const ConsoleView: React.FC = () => {
         <div className={styles.container}>
             <div className={styles.toolbar}>
                 <div className={styles.filterGroup}>
-                    {(['CHAT', 'GAME', 'NET', 'SYS', 'STUFF', 'USER'] as LogTag[]).map(tag => (
+                    {(['CHAT', 'GAME', 'NET', 'SYS', 'STUFF', 'USER', 'LOG'] as LogTag[]).map(tag => (
                         <button 
                             key={tag}
                             className={`${styles.tagFilter} ${visibleTags.has(tag) ? styles.tagFilterActive : ''} ${styles['tag' + tag]}`}
@@ -194,7 +198,7 @@ export const ConsoleView: React.FC = () => {
                 </button>
             </div>
 
-            <div className={styles.logArea}>
+            <div className={styles.logArea} ref={logAreaRef} onScroll={handleScroll}>
                 {filteredMessages.map(msg => (
                     <div key={msg.id} className={styles.message}>
                         <span className={styles.timestamp}>[{msg.timestamp}]</span>
@@ -207,6 +211,12 @@ export const ConsoleView: React.FC = () => {
                     </div>
                 ))}
                 <div ref={logEndRef} />
+                
+                {!autoScroll && (
+                    <button className={styles.scrollDownButton} onClick={() => setAutoScroll(true)}>
+                        New messages below
+                    </button>
+                )}
             </div>
 
             <form className={styles.inputArea} onSubmit={(e) => { e.preventDefault(); handleSend(inputValue); }}>
