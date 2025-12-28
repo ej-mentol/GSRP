@@ -58,35 +58,40 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({ isOpen, onCl
 
                 {/* PRESETS GRID */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, width: '100%' }}>
-                    {PRESETS.map((p, i) => (
-                        <button
-                            key={i}
-                            onClick={() => setColor(p)}
-                            style={{
-                                width: '100%',
-                                height: 18,
-                                borderRadius: 9,
-                                border: color === p ? '2px solid #fff' : '1px solid rgba(255,255,255,0.05)',
-                                cursor: 'pointer',
-                                padding: 0,
-                                outline: 'none',
-                                background: p.includes(';')
-                                    ? `linear-gradient(135deg, ${p.split(';')[0]}, ${p.split(';')[1]})`
-                                    : p,
-                                transition: 'all 0.1s ease',
-                                transform: color === p ? 'scale(1.05)' : 'scale(1)'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'scale(1.1)';
-                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = color === p ? 'scale(1.05)' : 'scale(1)';
-                                e.currentTarget.style.borderColor = color === p ? '#fff' : '1px solid rgba(255,255,255,0.05)';
-                            }}
-                            title={p}
-                        />
-                    ))}
+                    {PRESETS.map((p, i) => {
+                        const isSelected = color === p;
+                        const style = (() => {
+                            const highlight = 'radial-gradient(circle at 30% 25%, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.05) 10%, transparent 45%)';
+                            if (p.includes(';')) {
+                                const [a, b] = p.split(';');
+                                return { background: `${highlight}, linear-gradient(135deg, ${a}, ${b})` };
+                            }
+                            return { background: `${highlight}, ${p}` };
+                        })();
+
+                        return (
+                            <button
+                                key={i}
+                                onClick={() => setColor(p)}
+                                style={{
+                                    width: '100%',
+                                    height: 20,
+                                    borderRadius: 10,
+                                    border: isSelected ? '2px solid #fff' : '1px solid rgba(255,255,255,0.1)',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    outline: 'none',
+                                    ...style,
+                                    transition: 'all 0.15s ease',
+                                    transform: isSelected ? 'scale(1.1)' : 'scale(1)',
+                                    boxShadow: isSelected ? '0 0 10px rgba(255,255,255,0.2)' : 'inset 0 0 0 0.5px rgba(255,255,255,0.05)',
+                                    zIndex: isSelected ? 2 : 1,
+                                    WebkitMaskImage: '-webkit-radial-gradient(white, black)'
+                                }}
+                                title={p}
+                            />
+                        );
+                    })}
                 </div>
 
                 {/* INPUT AREA */}

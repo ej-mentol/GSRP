@@ -277,11 +277,21 @@ function App() {
                         )}
                         {activeTab === 'DB Search' && (
                             <div className="scrollableContent">
-                                <DatabaseView searchTerm={dbSearchTerm} onSearchChange={dbSearchHandler} players={dbResults} enableAvatarCdn={enableAvatarCdn} favoriteColors={favoriteColors}
-                                    onContextMenu={(e, p) => { e.preventDefault(); setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'main' }); }}
-                                    onAvatarContextMenu={(e, p) => { e.preventDefault(); e.stopPropagation(); setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'avatar' }); }}
-                                    onPickCustomColor={() => setColorPickerConfig({ isOpen: true, initialColor: '#3b82f6' })}
-                                    vacBanned={dbSearchVac} gameBanned={dbSearchGame} communityBanned={dbSearchComm} economyBanned={dbSearchEco} caseSensitive={dbSearchCaseSensitive} isLoading={isDbLoading} />
+                                                                <DatabaseView
+                                                                    searchTerm={dbSearchTerm}
+                                                                    onSearchChange={dbSearchHandler}
+                                                                    players={dbResults}
+                                                                    enableAvatarCdn={enableAvatarCdn}
+                                                                    favoriteColors={favoriteColors}
+                                                                    onContextMenu={(e, p) => { e.preventDefault(); setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'main' }); }}
+                                                                    onAvatarContextMenu={(e, p) => { e.preventDefault(); e.stopPropagation(); setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'avatar' }); }}
+                                                                    vacBanned={dbSearchVac}
+                                                                    gameBanned={dbSearchGame}
+                                                                    communityBanned={dbSearchComm}
+                                                                    economyBanned={dbSearchEco}
+                                                                    caseSensitive={dbSearchCaseSensitive}
+                                                                    isLoading={isDbLoading}
+                                                                />
                             </div>
                         )}
                         {activeTab === 'Report' && <div className="scrollableContent"><ReportView allPlayers={players} reportTargets={reportTargets} onAddTarget={handleAddToReport} onRemoveTarget={handleRemoveFromReport} servers={servers} onUpdateServers={handleUpdateServers} onReportChange={setReportData} /></div>}

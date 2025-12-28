@@ -4,7 +4,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.8); /* Darker */
+    background-color: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
@@ -48,11 +48,6 @@
     transition: all 0.2s;
 }
 
-.closeButton:hover {
-    color: var(--text-primary);
-    background-color: var(--border-subtle);
-}
-
 .content {
     display: flex;
     flex-direction: column;
@@ -60,20 +55,86 @@
 }
 
 .previewArea {
-    padding: 20px;
+    padding: 24px;
     background-color: var(--bg-sidebar);
     border-radius: 12px;
     border: 1px dashed var(--border-subtle);
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 .interactivePreview {
     position: relative;
-    cursor: crosshair;
 }
 
+/* TARGET ZONES */
+.targetText {
+    cursor: pointer;
+    position: relative;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.targetText:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.targetActive {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+    box-shadow: 0 0 0 1px var(--accent-blue);
+}
+
+.targetBadge {
+    cursor: pointer;
+    position: relative;
+    padding: 4px 10px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.badgeActive {
+    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent-blue);
+}
+
+.stripeZone {
+    position: absolute;
+    left: -10px;
+    top: -10px;
+    bottom: -10px;
+    width: 24px;
+    cursor: pointer;
+    z-index: 10;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.stripeZoneActive {
+    background-color: rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 2px var(--accent-blue);
+}
+
+/* INDICATORS */
+.miniDot {
+    position: absolute;
+    top: -2px;
+    right: -6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--accent-green);
+    box-shadow: 0 0 8px var(--accent-green);
+}
+
+.dotIndicator {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 12px;
+    border-radius: 2px;
+    background-color: var(--accent-green);
+}
+
+/* PALETTE */
 .paletteArea {
     display: flex;
     flex-direction: column;
@@ -81,37 +142,16 @@
 }
 
 .sectionLabel {
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 800;
     text-transform: uppercase;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     letter-spacing: 0.05em;
 }
 
-.colorGrid {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.colorBtn {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 2px solid transparent; /* Keep border for spacing if needed, or remove and use shadow */
-    cursor: pointer;
-    transition: transform 0.1s;
-    position: relative;
-    background-clip: padding-box;
-    overflow: hidden;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
-}
-
-/* ... */
-
 .hexInputGroup {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     align-items: center;
 }
 
@@ -124,9 +164,9 @@
     background-color: var(--bg-sidebar);
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
-    padding: 8px 8px 8px 24px; /* Space for hash */
+    padding: 10px 10px 10px 28px;
     border-radius: 8px;
-    font-size: 12px;
+    font-size: 13px;
     font-family: 'JetBrains Mono', monospace;
     width: 100%;
     outline: none;
@@ -139,30 +179,51 @@
 
 .hexHash {
     position: absolute;
-    left: 8px;
+    left: 10px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--text-muted);
-    font-size: 12px;
-    pointer-events: none;
+    font-size: 14px;
 }
 
-.gradientArrow {
-    color: var(--text-muted);
+.colorGrid {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.colorBtn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none; /* Remove border to prevent bleeding */
+    cursor: pointer;
+    transition: transform 0.1s;
+    position: relative;
+    /* Ultra-precise mask */
+    -webkit-mask-image: radial-gradient(circle, #000 98%, transparent 100%);
+    mask-image: radial-gradient(circle, #000 98%, transparent 100%);
+    box-shadow: 
+        0 0 0 1px rgba(255, 255, 255, 0.1), /* Subtle outer rim */
+        inset 0 0 3px rgba(0, 0, 0, 0.3);   /* Edge-hiding inner shadow */
 }
 
 .colorBtn:hover {
-    transform: scale(1.1);
+    transform: scale(1.15);
+    z-index: 2;
 }
 
-.colorBtnActive {
-    border-color: #fff;
-    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent-blue);
+.divider {
+    width: 1px;
+    height: 20px;
+    background-color: var(--border-subtle);
+    margin: 0 4px;
 }
 
 .eraserBtn {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     border: 1px dashed var(--text-muted);
     display: flex;
@@ -176,39 +237,26 @@
 .eraserBtnActive {
     border-color: var(--accent-red);
     color: var(--accent-red);
-    background-color: rgba(239, 68, 68, 0.1);
 }
 
 .aliasInput {
     background-color: var(--bg-sidebar);
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
-    padding: 10px 12px;
+    padding: 12px;
     border-radius: 8px;
     font-size: 14px;
     width: 100%;
     outline: none;
-    transition: border-color 0.2s;
-}
-
-.aliasInput:focus {
-    border-color: var(--accent-blue);
 }
 
 .clearAliasBtn {
     position: absolute;
-    right: 10px;
+    right: 12px;
     background: transparent;
     border: none;
     color: var(--text-muted);
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.clearAliasBtn:hover {
-    color: var(--text-primary);
 }
 
 .footer {
@@ -220,9 +268,9 @@
 }
 
 .btn {
-    padding: 8px 20px;
+    padding: 10px 24px;
     border-radius: 8px;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 13px;
     cursor: pointer;
     border: none;
@@ -234,30 +282,7 @@
     color: var(--text-secondary);
 }
 
-.btnCancel:hover {
-    background-color: var(--border-subtle);
-    color: var(--text-primary);
-}
-
 .btnSave {
     background-color: var(--accent-blue);
     color: white;
-}
-
-.btnSave:hover {
-    background-color: #2563eb;
-}
-
-.hoverText:hover {
-    text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
-    transform: scale(1.02);
-}
-
-.hoverElement:hover {
-    box-shadow: 0 0 0 2px var(--accent-blue);
-    transform: scale(1.05);
-}
-
-.hoverZone:hover {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), transparent);
 }

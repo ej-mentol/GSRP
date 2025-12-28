@@ -163,7 +163,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                         {isDatabaseEntry ? player.personaName : player.displayName}
                     </span>
                     {player.alias && (
-                        <div className={styles.alias} style={getStyleForColor(player.aliasColor, false, 'var(--accent-blue)')}>
+                        <div className={styles.alias} style={{ ...getStyleForColor(player.aliasColor, false, 'var(--accent-blue)'), color: '#fff' }}>
                             {player.alias}
                         </div>
                     )}

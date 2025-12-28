@@ -11,7 +11,6 @@ interface DatabaseViewProps {
     favoriteColors: string[];
     onContextMenu: (e: React.MouseEvent, player: Player) => void;
     onAvatarContextMenu: (e: React.MouseEvent, player: Player) => void;
-    onPickCustomColor: () => void;
     enableAvatarCdn?: boolean;
     vacBanned: boolean;
     gameBanned: boolean;
@@ -30,7 +29,6 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     favoriteColors,
     onContextMenu,
     onAvatarContextMenu,
-    onPickCustomColor,
     enableAvatarCdn = true,
     vacBanned,
     gameBanned,
@@ -255,12 +253,12 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
                         </div>
 
                     ) : (
-
-
-                        <div className={styles.emptyState}>
-                            <Search size={48} className={styles.emptyIcon} />
-                            <span>No results for your query</span>
-                        </div>
+                        !isLoading && (
+                            <div className={styles.emptyState}>
+                                <Search size={48} className={styles.emptyIcon} />
+                                <span>No results for your query</span>
+                            </div>
+                        )
                     )}
                 </div>
             </main>
@@ -311,7 +309,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
                     <div className={styles.colorList}>
                         <div
                             className={`${styles.colorItem} ${!selectedColor ? styles.colorItemActive : ''}`}
-                            style={{ background: 'linear-gradient(45deg, #333, #666)' }}
+                            style={{ background: 'radial-gradient(circle at 30% 25%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 10%, transparent 45%), linear-gradient(45deg, #333, #666)' }}
                             onClick={() => {
                                 setSelectedColor(null);
                                 onSearchChange(searchTerm, caseSensitive, null, vacBanned, gameBanned, communityBanned, economyBanned);
@@ -341,13 +339,6 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
                                 />
                             );
                         })}
-                        <div
-                            className={styles.addColorItem}
-                            onClick={onPickCustomColor}
-                            title="Pick custom color"
-                        >
-                            <Plus size={14} />
-                        </div>
                     </div>
                 </div>
 
