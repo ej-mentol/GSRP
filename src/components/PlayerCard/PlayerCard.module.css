@@ -1,0 +1,324 @@
+.card {
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    /* Nicely rounded */
+    padding: 12px 20px;
+    gap: 20px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    cursor: default;
+    height: 96px;
+    margin: 0 12px 12px 12px;
+    /* Spacing between cards */
+}
+
+.card:hover {
+    background-color: var(--bg-card-hover);
+    transform: translateY(-2px);
+    border-color: var(--border-bright);
+    z-index: 5;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.hasBan {
+    border-left: 4px solid var(--accent-red);
+}
+
+.hasBan:hover {
+    border-left-color: #ff5f5f;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Avatar Section - Increased to 68px */
+.avatarContainer {
+    position: relative;
+    width: 68px;
+    height: 68px;
+    flex-shrink: 0;
+}
+
+.newPlayerRing::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border: 2px solid var(--accent-blue);
+    border-radius: 14px;
+    opacity: 0.5;
+    pointer-events: none;
+    animation: pulseRing 2s infinite;
+}
+
+@keyframes pulseRing {
+    0% {
+        transform: scale(0.95);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(0.95);
+        opacity: 0.5;
+    }
+}
+
+.avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    object-fit: cover;
+    background-color: var(--bg-sidebar);
+    border: 1px solid var(--border-subtle);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.avatarLoaded {
+    opacity: 1;
+}
+
+.avatarShimmer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, var(--bg-sidebar) 0%, var(--border-bright) 50%, var(--bg-sidebar) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.skeletonText {
+    height: 14px;
+    width: 80px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--bg-sidebar) 0%, var(--border-bright) 50%, var(--bg-sidebar) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+.avatarFallback {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #3f3f46 0%, #27272a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* Info Section - Spaced out lines */
+.info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    height: 68px;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    line-height: 1.1;
+    min-height: 18px;
+}
+
+.displayName {
+    font-size: 16px;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.alias {
+    background-color: var(--accent-blue);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.steamId {
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    /* Reduced to fit 3-row layout better */
+    opacity: 0.6;
+    letter-spacing: -0.2px;
+}
+
+.badges {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.badge {
+    padding: 2px 8px;
+    /* Slightly plumper */
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    border: 1px solid transparent;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.badgeRed {
+    background-color: transparent !important;
+    color: var(--accent-red);
+    border: 1px solid var(--accent-red);
+}
+
+.badgeOrange {
+    background-color: transparent !important;
+    color: var(--accent-orange);
+    border: 1px solid var(--accent-orange);
+}
+
+.badgePurple {
+    background-color: transparent !important;
+    color: var(--accent-purple);
+    border: 1px solid var(--accent-purple);
+}
+
+.badgeDetail {
+    font-weight: 400;
+    opacity: 0.7;
+}
+
+.badgeDivider {
+    opacity: 0.3;
+    font-weight: 400;
+    margin: 0 2px;
+}
+
+.personaName {
+    font-size: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--accent-steam);
+    opacity: 0.9;
+}
+
+/* Rest of styles remain same... */
+.rankIconContainer {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background-color: var(--bg-card);
+    border: 2px solid var(--bg-card);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.card:hover .rankIconContainer {
+    background-color: var(--bg-card-hover);
+    border-color: var(--bg-card-hover);
+}
+
+.rankIconSvg {
+    width: 14px;
+    height: 14px;
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+}
+
+.rankIconImg {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+}
+
+.top-left {
+    top: -6px;
+    left: -6px;
+}
+
+.top-right {
+    top: -6px;
+    right: -6px;
+}
+
+.bottom-left {
+    bottom: -6px;
+    left: -6px;
+}
+
+.bottom-right {
+    bottom: -6px;
+    right: -6px;
+}
+
+.status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 150px;
+    justify-content: flex-end;
+}
+
+.statusText {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: -0.1px;
+}
+
+.menuButton {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 8px;
+    transition: all 0.1s;
+    margin-left: 10px;
+}
+
+.menuButton:hover {
+    color: var(--text-primary);
+    background-color: var(--border-bright);
+}

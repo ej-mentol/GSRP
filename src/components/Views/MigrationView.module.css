@@ -1,0 +1,82 @@
+.migrationScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    width: 100vw;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    padding: 40px;
+    text-align: center;
+}
+
+.coffeeIcon {
+    color: var(--accent-orange);
+    margin-bottom: 24px;
+}
+
+.title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.desc {
+    color: var(--text-secondary);
+    max-width: 450px;
+    line-height: 1.6;
+    margin-bottom: 32px;
+}
+
+.progressBox {
+    width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.progressBar {
+    height: 8px;
+    background-color: var(--bg-card);
+    border-radius: 4px;
+    overflow: hidden;
+    width: 100%;
+}
+
+.progressFill {
+    height: 100%;
+    background-color: var(--accent-blue);
+    transition: width 0.3s ease;
+}
+
+.statusText {
+    font-size: 13px;
+    color: var(--accent-steam);
+    font-family: monospace;
+}
+
+.backupCheck {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.goButton {
+    background-color: var(--accent-blue);
+    color: white;
+    border: none;
+    padding: 12px 48px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.goButton:hover {
+    transform: scale(1.05);
+}

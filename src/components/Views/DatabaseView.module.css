@@ -1,0 +1,201 @@
+.container {
+    display: flex;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Main Results Area */
+.mainArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* Resize Handle */
+.resizeHandle {
+    width: 4px;
+    height: 100%;
+    cursor: col-resize;
+    background-color: transparent;
+    transition: background-color 0.2s;
+    flex-shrink: 0;
+    z-index: 10;
+}
+
+.resizeHandle:hover, .resizeHandleActive {
+    background-color: var(--accent-blue);
+}
+
+/* Internal Sidebar */
+.searchSidebar {
+    /* Width will be set via inline style in React */
+    background-color: var(--bg-sidebar);
+    border-left: 1px solid var(--border-subtle);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    flex-shrink: 0;
+    overflow-x: hidden; /* Hide content if sidebar is too small */
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sectionTitle {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+.toolbar {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    background-color: var(--bg-main);
+}
+
+.resultsCount {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.sortGroup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.select {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-bright);
+    color: var(--text-primary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    outline: none;
+}
+
+.resultsList {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.emptyState {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: var(--text-muted);
+}
+
+.emptyIcon {
+    opacity: 0.2;
+}
+
+.emptyState span {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Search Inputs */
+.input {
+    background-color: var(--bg-main);
+    border: 1px solid var(--border-bright);
+    color: var(--text-primary);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+    width: 100%;
+}
+
+.checkboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.checkbox {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--border-bright);
+    border-radius: 4px;
+    position: relative;
+    background-color: var(--bg-main);
+    flex-shrink: 0;
+}
+
+.checkbox:checked {
+    background-color: var(--accent-blue);
+    border-color: var(--accent-blue);
+}
+
+.checkbox:checked::after {
+    content: '✔';
+    position: absolute;
+    color: white;
+    font-size: 10px;
+    left: 3px;
+    top: 0px;
+}
+
+.colorList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.colorItem {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.colorItemActive {
+    border-color: #fff;
+    box-shadow: 0 0 0 2px var(--accent-blue);
+}
+
+.addColorItem {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px dashed var(--border-bright);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: all 0.1s ease;
+}
+
+.addColorItem:hover {
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+    background-color: rgba(59, 130, 246, 0.05);
+}

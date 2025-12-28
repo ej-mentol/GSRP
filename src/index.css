@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+html {
+  scroll-behavior: smooth;
+}
+
+:root {
+  /* Core Backgrounds */
+  --bg-sidebar: #09090b;
+  --bg-main: #0c0c0e;
+  --bg-card: #121214;
+  --bg-card-hover: #18181b;
+
+  /* Borders & Dividers */
+  --border-subtle: #1f1f23;
+  --border-bright: #27272a;
+
+  /* Text Colors */
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted: #52525b;
+
+  /* Accent Colors (Professional Shades) */
+  --accent-blue: #3b82f6;
+  --accent-steam: #60a5fa;
+  --accent-red: #ef4444;
+  --accent-orange: #f59e0b;
+  --accent-purple: #a855f7;
+  --accent-green: #10b981;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  /* App container handles scroll */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* --- SCROLLBARS (The Dark Mode Essential) --- */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-bright);
+  border-radius: 5px;
+  border: 2px solid var(--bg-main);
+  /* Creates padding effect */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--bg-main);
+}
+
+/* --- SELECTION --- */
+::selection {
+  background: rgba(59, 130, 246, 0.3);
+  /* Blue with alpha */
+  color: #fff;
+}
+
+/* --- UTILS --- */
+code,
+pre,
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+}

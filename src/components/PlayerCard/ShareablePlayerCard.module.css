@@ -1,0 +1,130 @@
+.shareCard {
+    width: 440px;
+    background: linear-gradient(135deg, #1A1A1D 0%, #121214 100%);
+    border: 1px solid #3f3f46;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: white;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    position: fixed;
+    left: -2000px;
+    /* Far away from viewport */
+    top: -2000px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.avatarContainer {
+    flex-shrink: 0;
+}
+
+.avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    object-fit: cover;
+}
+
+.info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.displayName {
+    font-size: 18px;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -0.3px;
+}
+
+.alias {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: white;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.steamId {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #71717a;
+    letter-spacing: -0.2px;
+}
+
+.personaName {
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.badges {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.badge {
+    display: flex;
+    align-items: center;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+}
+
+.badgeRed {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+}
+
+.badgeOrange {
+    background: rgba(249, 115, 22, 0.1);
+    border-color: rgba(249, 115, 22, 0.2);
+    color: #fdba74;
+}
+
+.badgePurple {
+    background: rgba(168, 85, 247, 0.1);
+    border-color: rgba(168, 85, 247, 0.2);
+    color: #d8b4fe;
+}
+
+.branding {
+    position: absolute;
+    bottom: 8px;
+    right: 12px;
+    display: flex;
+    align-items: center;
+    font-size: 9px;
+    font-weight: 900;
+    color: #3f3f46;
+    letter-spacing: 1px;
+}

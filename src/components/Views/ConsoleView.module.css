@@ -1,0 +1,148 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: var(--bg-main);
+}
+
+.toolbar {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+}
+
+.filterGroup {
+    display: flex;
+    gap: 6px;
+}
+
+.tagFilter {
+    background-color: var(--bg-sidebar);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.1s;
+    text-transform: uppercase;
+}
+
+.tagFilter:hover {
+    border-color: var(--border-bright);
+}
+
+.tagFilterActive {
+    border-color: currentColor;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Specific active states using our tag colors */
+.tagFilterActive.tagCHAT  { color: var(--accent-purple); background-color: rgba(168, 85, 247, 0.1); }
+.tagFilterActive.tagGAME  { color: var(--text-primary);   background-color: rgba(255, 255, 255, 0.1); }
+.tagFilterActive.tagNET   { color: var(--accent-orange); background-color: rgba(245, 158, 11, 0.1); }
+.tagFilterActive.tagSYS   { color: var(--accent-blue);   background-color: rgba(59, 130, 246, 0.1); }
+.tagFilterActive.tagSTUFF { color: var(--accent-green);  background-color: rgba(16, 185, 129, 0.1); }
+.tagFilterActive.tagUSER  { color: var(--accent-steam);  background-color: rgba(96, 165, 250, 0.1); }
+
+.logArea {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.message {
+    display: flex;
+    gap: 10px;
+    word-break: break-all;
+    align-items: baseline;
+}
+
+.timestamp {
+    color: var(--text-muted);
+    font-size: 11px;
+    min-width: 70px;
+    user-select: none;
+}
+
+.tag {
+    font-weight: 800;
+    min-width: 55px;
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+/* Tag Colors from Python Protocol */
+.tagCHAT  { color: var(--accent-purple); }
+.tagGAME  { color: var(--text-primary); }
+.tagNET   { color: var(--accent-orange); }
+.tagSYS   { color: var(--accent-blue); }
+.tagSTUFF { color: var(--accent-green); }
+.tagRAW   { color: var(--text-muted); }
+.tagUSER  { color: var(--accent-steam); font-style: italic; }
+
+.text {
+    color: var(--text-primary);
+}
+
+.nonPrintable {
+    color: var(--accent-red);
+    font-weight: 700;
+    font-size: 11px;
+    background: rgba(239, 68, 68, 0.1);
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+.inputArea {
+    padding: 12px 20px;
+    background-color: var(--bg-sidebar);
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.prompt {
+    color: var(--accent-blue);
+    font-weight: 800;
+}
+
+.consoleInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+}
+
+.clearButton {
+    background: transparent;
+    border: 1px solid var(--border-bright);
+    color: var(--text-secondary);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.clearButton:hover {
+    background-color: var(--border-subtle);
+    color: var(--text-primary);
+}

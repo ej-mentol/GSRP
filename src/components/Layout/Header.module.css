@@ -1,0 +1,106 @@
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 56px;
+    padding-left: 24px; /* Only left padding */
+    padding-right: 0;   /* No right padding for flush buttons */
+    background-color: var(--bg-main);
+    border-bottom: 1px solid var(--border-subtle);
+    -webkit-app-region: drag;
+    user-select: none;
+}
+
+.leftSection {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.branding {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logoIcon {
+    color: var(--accent-blue);
+    flex-shrink: 0;
+}
+
+.titleBlock {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 1.1;
+}
+
+.mainTitle {
+    font-weight: 800;
+    font-size: 14px;
+    color: #fff;
+    letter-spacing: 0.5px;
+}
+
+.subTitle {
+    font-size: 9px;
+    color: var(--text-muted);
+    font-weight: 400;
+    white-space: nowrap;
+}
+
+.divider {
+    width: 1px;
+    height: 20px;
+    background-color: var(--border-bright);
+    margin: 0 4px;
+}
+
+.pageTitle {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.playerCount {
+    padding: 1px 8px;
+    background-color: var(--border-subtle);
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.rightSection {
+    display: flex;
+    align-items: center;
+    position: relative;
+    height: 100%;
+    padding-right: 145px; /* Reserve space for window controls */
+    -webkit-app-region: no-drag;
+    gap: 12px;
+}
+
+.headerActionButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--accent-blue);
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.headerActionButton:hover {
+    background-color: #2563eb;
+    transform: translateY(-1px);
+}
+
+.headerActionButton:active {
+    transform: translateY(0);
+}

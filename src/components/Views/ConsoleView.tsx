@@ -1,0 +1,225 @@
+import React, { useState, useEffect, useRef } from 'react';
+import styles from './ConsoleView.module.css';
+import { Trash2, ChevronRight } from 'lucide-react';
+
+type LogTag = 'CHAT' | 'GAME' | 'NET' | 'SYS' | 'STUFF' | 'RAW' | 'USER';
+
+interface LogMessage {
+    id: number;
+    timestamp: string;
+    tags: Set<LogTag>;
+    text: string;
+    receivedAt: number;
+}
+
+const TAG_ORDER: LogTag[] = ['SYS', 'NET', 'GAME', 'CHAT', 'STUFF', 'USER', 'RAW'];
+
+// GoldSource Color Mapping
+const GS_COLORS: Record<number, string> = {
+    0x01: 'var(--text-primary)',   // Standard
+    0x03: '#60a5fa',               // Team (Blueish for admin)
+    0x04: '#10b981',               // Green
+};
+
+export const ConsoleView: React.FC = () => {
+    const [messages, setMessages] = useState<LogMessage[]>([
+        { id: 1, timestamp: '19:10:01', tags: new Set(['SYS']), text: 'GoldSource MetaHookSV Console Ready', receivedAt: Date.now() },
+    ]);
+    
+    const [visibleTags, setVisibleTags] = useState<Set<LogTag>>(new Set(['CHAT', 'GAME', 'NET', 'SYS', 'STUFF', 'RAW', 'USER']));
+    const [inputValue, setInputValue] = useState('');
+    const [history, setHistory] = useState<string[]>([]);
+    const [historyIndex, setHistoryIndex] = useState(-1);
+    const logEndRef = useRef<HTMLDivElement>(null);
+
+    // From Python script
+    const AUTOCOMPLETE_OPTIONS = [
+        "say ", "status", "echo ", "connect ", "disconnect", "quit", "name ", 
+        "map ", "retry", "kill", "say_team ", "snapshot", "clear"
+    ];
+
+    useEffect(() => {
+        // Listen for Backend Console Logs
+        const remove = window.ipcRenderer?.onBackend((msg) => {
+            if (msg.type === 'CONSOLE_LOG') {
+                const tag = msg.data.Tag || msg.data.tag;
+                const text = msg.data.Text || msg.data.text;
+                if (text) addMessage(text, tag as LogTag);
+            }
+        });
+        return () => remove?.();
+    }, []);
+
+    useEffect(() => {
+        logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, visibleTags]);
+
+    const addMessage = (text: string, tag: LogTag) => {
+        const now = Date.now();
+        const timeWindow = 100;
+
+        setMessages(prev => {
+            const duplicateIndex = prev.findLastIndex(m => 
+                m.text === text && (now - m.receivedAt) < timeWindow
+            );
+
+            if (duplicateIndex !== -1) {
+                const updated = [...prev];
+                const target = { ...updated[duplicateIndex] };
+                target.tags = new Set([...Array.from(target.tags), tag]);
+                updated[duplicateIndex] = target;
+                return updated;
+            }
+
+            return [...prev, {
+                id: now + Math.random(),
+                timestamp: new Date().toLocaleTimeString('ru-RU', { hour12: false }),
+                tags: new Set([tag]),
+                text: text,
+                receivedAt: now
+            }];
+        });
+    };
+
+    const handleSend = (text: string) => {
+        if (!text.trim()) return;
+        if (text === 'clear') { setMessages([]); setInputValue(''); return; }
+        
+        // Add to history
+        if (history.length === 0 || history[history.length - 1] !== text) {
+            setHistory(prev => [...prev, text]);
+        }
+        setHistoryIndex(-1);
+
+        // Send to Backend
+        // We need settings for IP/Port, for now assume localhost default from mock
+        // Ideally, ConsoleView should receive settings props
+        window.ipcRenderer?.sendToBackend('SEND_UDP', { 
+            ip: '127.0.0.1', 
+            port: 26001, 
+            message: text 
+        });
+
+        // Optimistic local add
+        addMessage(text, 'USER');
+        setInputValue('');
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (history.length > 0) {
+                const newIndex = historyIndex === -1 ? history.length - 1 : Math.max(0, historyIndex - 1);
+                setHistoryIndex(newIndex);
+                setInputValue(history[newIndex]);
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (historyIndex !== -1) {
+                const newIndex = historyIndex + 1;
+                if (newIndex < history.length) {
+                    setHistoryIndex(newIndex);
+                    setInputValue(history[newIndex]);
+                } else {
+                    setHistoryIndex(-1);
+                    setInputValue('');
+                }
+            }
+        } else if (e.key === 'Tab') {
+            e.preventDefault();
+            if (inputValue) {
+                const matches = AUTOCOMPLETE_OPTIONS.filter(opt => opt.startsWith(inputValue));
+                if (matches.length === 1) setInputValue(matches[0]);
+                else if (matches.length > 1) {
+                    // Find common prefix
+                    const shortest = matches.reduce((a, b) => a.length <= b.length ? a : b);
+                    let prefix = inputValue;
+                    for (let i = 0; i < shortest.length; i++) {
+                        if (matches.every(m => m.startsWith(shortest.slice(0, i + 1)))) {
+                            prefix = shortest.slice(0, i + 1);
+                        } else break;
+                    }
+                    setInputValue(prefix);
+                }
+            }
+        }
+    };
+
+    // --- GOLDSOURCE COLOR PARSER ---
+    const formatText = (text: string) => {
+        const result = [];
+        let currentColor = 'var(--text-primary)';
+
+        for (let i = 0; i < text.length; i++) {
+            const code = text.charCodeAt(i);
+            
+            if (GS_COLORS[code]) {
+                currentColor = GS_COLORS[code];
+                continue; // Skip the byte itself
+            }
+
+            if ((code < 32 && !['\n', '\r', '\t'].includes(text[i])) || code === 127) {
+                result.push(<span key={i} className={styles.nonPrintable}>[${code.toString(16).toUpperCase().padStart(2, '0')}]</span>);
+            } else {
+                result.push(<span key={i} style={{ color: currentColor }}>{text[i]}</span>);
+            }
+        }
+        return result;
+    };
+
+    const filteredMessages = messages.filter(m => 
+        Array.from(m.tags).some(tag => visibleTags.has(tag))
+    );
+
+    return (
+        <div className={styles.container}>
+            <div className={styles.toolbar}>
+                <div className={styles.filterGroup}>
+                    {(['CHAT', 'GAME', 'NET', 'SYS', 'STUFF', 'USER'] as LogTag[]).map(tag => (
+                        <button 
+                            key={tag}
+                            className={`${styles.tagFilter} ${visibleTags.has(tag) ? styles.tagFilterActive : ''} ${styles['tag' + tag]}`}
+                            onClick={() => {
+                                const next = new Set(visibleTags);
+                                if (next.has(tag)) next.delete(tag); else next.add(tag);
+                                setVisibleTags(next);
+                            }}
+                        >
+                            {tag}
+                        </button>
+                    ))}
+                </div>
+                <button className={styles.clearButton} onClick={() => setMessages([])}>
+                    <Trash2 size={12} /> Clear
+                </button>
+            </div>
+
+            <div className={styles.logArea}>
+                {filteredMessages.map(msg => (
+                    <div key={msg.id} className={styles.message}>
+                        <span className={styles.timestamp}>[{msg.timestamp}]</span>
+                        <div className={styles.tagList}>
+                            {TAG_ORDER.filter(t => msg.tags.has(t)).map(t => (
+                                <span key={t} className={`${styles.tag} ${styles['tag' + t]}`}>[{t}]</span>
+                            ))}
+                        </div>
+                        <span className={styles.text}>{formatText(msg.text)}</span>
+                    </div>
+                ))}
+                <div ref={logEndRef} />
+            </div>
+
+            <form className={styles.inputArea} onSubmit={(e) => { e.preventDefault(); handleSend(inputValue); }}>
+                <ChevronRight className={styles.prompt} size={18} />
+                <input 
+                    type="text" 
+                    className={styles.consoleInput} 
+                    placeholder="Type server command..."
+                    value={inputValue}
+                    onKeyDown={handleKeyDown}
+                    onChange={(e) => setInputValue(e.target.value)}
+                />
+            </form>
+        </div>
+    );
+};

@@ -1,0 +1,155 @@
+.menu {
+    position: fixed;
+    z-index: 25000;
+    background-color: #1c1c1f;
+    border: 1px solid var(--border-bright);
+    border-radius: 10px;
+    padding: 6px;
+    min-width: 220px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.1s ease;
+    position: relative;
+    user-select: none;
+}
+
+.itemContent {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.itemLabel {
+    flex: 1;
+}
+
+.item:hover,
+.itemActive {
+    background-color: var(--accent-blue);
+    color: #fff !important;
+}
+
+.hover-blueIcon:hover,
+.hover-blueIcon.itemActive {
+    background-color: var(--accent-blue);
+}
+
+.hover-greenIcon:hover,
+.hover-greenIcon.itemActive {
+    background-color: var(--accent-green);
+}
+
+.hover-orangeIcon:hover,
+.hover-orangeIcon.itemActive {
+    background-color: var(--accent-orange);
+}
+
+.hover-redIcon:hover,
+.hover-redIcon.itemActive {
+    background-color: var(--accent-red);
+}
+
+.hover-purpleIcon:hover,
+.hover-purpleIcon.itemActive {
+    background-color: var(--accent-purple);
+}
+
+.hover-pinkIcon:hover,
+.hover-pinkIcon.itemActive {
+    background-color: #ec4899;
+}
+
+.itemDanger:hover {
+    background-color: var(--accent-red);
+}
+
+.itemDisabled {
+    opacity: 0.4;
+    cursor: not-allowed !important;
+}
+
+.separator {
+    height: 1px;
+    background-color: var(--border-subtle);
+    margin: 4px 6px;
+}
+
+.itemIcon {
+    opacity: 0.9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    flex-shrink: 0;
+}
+
+/* Force icons to inherit color unless active */
+.item:hover .itemIcon,
+.itemActive .itemIcon {
+    color: #fff !important;
+    opacity: 1;
+}
+
+/* Explicit Color Classes */
+.blueIcon {
+    color: var(--accent-blue);
+}
+
+.greenIcon {
+    color: var(--accent-green);
+}
+
+.orangeIcon {
+    color: var(--accent-orange);
+}
+
+.redIcon {
+    color: var(--accent-red);
+}
+
+.purpleIcon {
+    color: var(--accent-purple);
+}
+
+.pinkIcon {
+    color: #ec4899;
+}
+
+.menuCheckbox {
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid currentColor;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checked {
+    background-color: currentColor;
+}
+
+.checked svg {
+    color: #1c1c1f;
+    /* Contrast checkmark */
+}
+
+.submenuArrow {
+    opacity: 0.5;
+    margin-left: 8px;
+}

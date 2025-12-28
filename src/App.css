@@ -1,0 +1,172 @@
+.appContainer {
+    height: 100vh;
+    overflow: hidden;
+    background-color: var(--bg-main);
+    /* Corrected */
+}
+
+/* Flex Row for Sidebar + Content */
+.rootLayout {
+    display: flex;
+    height: 100%;
+    width: 100%;
+}
+
+.contentArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background-color: var(--bg-main);
+}
+
+.mainContent {
+    flex: 1;
+    overflow: hidden;
+    /* Disable parent scroll */
+    padding: 0;
+    background-color: var(--bg-main);
+    position: relative;
+    display: flex;
+    /* Enable Flexbox */
+    flex-direction: column;
+    /* Vertical Stack */
+}
+
+.scrollableContent {
+    flex: 1;
+    overflow-y: auto !important;
+    /* Force scroll */
+    padding-bottom: 40px;
+    height: 100%;
+}
+
+.viewToolbar {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    background-color: var(--bg-main);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+    /* Keep fixed height */
+    z-index: 10;
+}
+
+.loader {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-subtle);
+    border-bottom-color: var(--accent-blue);
+    border-radius: 50%;
+    display: inline-block;
+    animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.spin {
+    animation: rotation 1s linear infinite;
+}
+
+.toolbarGroup {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.searchWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 10px;
+    color: var(--text-muted);
+}
+
+.toolbarInput {
+    background-color: var(--bg-sidebar);
+    border: 1px solid var(--border-bright);
+    color: var(--text-primary);
+    padding: 6px 12px 6px 32px;
+    border-radius: 6px;
+    font-size: 12px;
+    width: 200px;
+    outline: none;
+}
+
+.toolbarButton {
+    background-color: transparent;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.toolbarButton:hover {
+    background-color: var(--border-subtle);
+    color: var(--text-primary);
+}
+
+.toolbarButtonActive {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: var(--accent-blue);
+    position: relative;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.1);
+}
+
+.toolbarSelect {
+    background-color: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+}
+
+/* Card List Layout */
+.cardGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    /* Space between rounded cards */
+    padding: 12px 0;
+}
+
+/* Professional Scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-main);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-bright);
+    border-radius: 10px;
+    border: 3px solid var(--bg-main);
+    /* Creates a floating effect */
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
