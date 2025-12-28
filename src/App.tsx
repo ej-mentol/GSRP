@@ -57,7 +57,6 @@ function App() {
 
     useEffect(() => {
         const unsubscribe = window.ipcRenderer?.onBackend((msg) => {
-            console.log('[Backend Pipe]', msg);
             switch (msg.type) {
                 case 'READY': setIsAppReady(true); setMigrationData(null); break;
                 case 'MIGRATION_REQUIRED': setMigrationData({ recordCount: msg.data.count, progress: 0, status: 'Database upgrade needed' }); break;

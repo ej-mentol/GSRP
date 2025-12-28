@@ -23,30 +23,47 @@ try {
     exit 1
 }
 
+Write-Host "--- Cleaning old builds ---" -ForegroundColor Yellow
+cmd /c npm run clean
+
 Write-Host "--- Starting GSRP Build Process ---" -ForegroundColor Cyan
 
 # 1. Run the build
-yarn build
-if ($LASTEXITCODE -ne 0) { Write-Error "Build failed!"; exit $LASTEXITCODE }
+cmd /c yarn build
+if ($LASTEXITCODE -ne 0) { 
+    Write-Error "Yarn build failed with exit code $LASTEXITCODE"
+    exit $LASTEXITCODE 
+}
 
 # 2. Get version from package.json
+if (!(Test-Path package.json)) { Write-Error "package.json not found!"; exit 1 }
 $packageJson = Get-Content -Raw -Path package.json | ConvertFrom-Json
 $version = $packageJson.version
 $name = "GSRP_v$($version)-win-x64"
 
 # 3. Prepare release directory
 $releaseDir = "dist/release"
-if (!(Test-Path $releaseDir)) { New-Item -ItemType Directory -Path $releaseDir }
+if (!(Test-Path $releaseDir)) { New-Item -ItemType Directory -Path $releaseDir | Out-Null }
 
 # 4. Create Archive
-$sourceDir = "dist/win-unpacked"
-$destPath = Join-Path $releaseDir "$name.zip"
+$sourceDir = Join-Path (Get-Location) "dist/win-unpacked"
+if (!(Test-Path $sourceDir)) { 
+    Write-Error "Build directory $sourceDir not found! Did electron-builder succeed?"
+    exit 1 
+}
 
-if (Test-Path $destPath) { Remove-Item $destPath }
+$destPath = Join-Path (Get-Location) "$releaseDir/$name.zip"
+if (Test-Path $destPath) { Remove-Item $destPath -Force }
 
 Write-Host "--- Archiving build to $destPath ---" -ForegroundColor Green
 
-# Use native PowerShell Compression (works everywhere)
-Compress-Archive -Path "$sourceDir\*" -DestinationPath $destPath
+# Use .NET System.IO.Compression for reliability (handles long paths and symlinks better)
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+try {
+    [System.IO.Compression.ZipFile]::CreateFromDirectory($sourceDir, $destPath)
+} catch {
+    Write-Error "Archiving failed: $($_.Exception.Message)"
+    exit 1
+}
 
 Write-Host "--- Done! Release ready in $releaseDir ---" -ForegroundColor Cyan

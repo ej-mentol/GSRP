@@ -33,13 +33,41 @@ let backendBuffer = '';
 
 function spawnBackend() {
   const isDev = !app.isPackaged
+  let exePath = ''
+  let args: string[] = []
+  let options: any = { shell: true }
+
   if (isDev) {
     const projectPath = path.join(__dirname, '../data_service/GSRP.Daemon.csproj')
-    backendProcess = spawn('dotnet', ['run', '--project', projectPath])
+    exePath = 'dotnet'
+    args = ['run', '--project', projectPath]
   } else {
-    const exePath = path.join(process.resourcesPath, 'bin', 'GSRP.Daemon.exe')
-    backendProcess = spawn(exePath)
+    exePath = path.join(process.resourcesPath, 'bin', 'GSRP.Daemon.exe')
+    options.cwd = path.join(process.resourcesPath, 'bin')
+    
+    // Kill existing instances only in production
+    try {
+      const { execSync } = require('node:child_process')
+      execSync('taskkill /F /IM GSRP.Daemon.exe /T', { stdio: 'ignore' })
+      console.log('Cleaned up previous daemon instances.')
+    } catch (e: any) {
+      // taskkill returns code 128 if process is not found. We only log other errors.
+      if (e.status !== 128) {
+        console.warn('Warning: Could not kill existing daemon instance:', e.message)
+      }
+    }
   }
+
+  console.log(`Spawning backend: ${exePath} ${args.join(' ')}`)
+  backendProcess = spawn(exePath, args, options)
+
+  backendProcess.on('error', (err) => {
+    console.error('Failed to start backend process:', err)
+    win?.webContents.send('backend-message', JSON.stringify({ 
+      type: "CONSOLE_LOG", 
+      data: { tag: "SYS", text: "CRITICAL: Failed to spawn daemon: " + err.message } 
+    }))
+  })
 
   backendProcess.stdout?.on('data', (data) => {
     backendBuffer += data.toString()
