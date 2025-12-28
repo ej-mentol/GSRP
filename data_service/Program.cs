@@ -85,6 +85,8 @@ namespace GSRP.Daemon
             while (true)
             {
                 var line = await Console.In.ReadLineAsync();
+                if (line == null) break; // Pipe closed, exit gracefully
+                
                 if (!string.IsNullOrEmpty(line) && _ipcHandler != null)
                 {
                     await _ipcHandler.HandleMessageAsync(line);
