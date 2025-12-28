@@ -50,8 +50,14 @@ function spawnBackend() {
       const { execSync } = require('node:child_process')
       execSync('taskkill /F /IM GSRP.Daemon.exe /T', { stdio: 'ignore' })
       console.log('Cleaned up previous daemon instances.')
+      // Give OS some time to release ports/files
+      const Atomics = (global as any).Atomics;
+      const SharedArrayBuffer = (global as any).SharedArrayBuffer;
+      if (Atomics && SharedArrayBuffer) {
+          const int32 = new Int32Array(new SharedArrayBuffer(4));
+          Atomics.wait(int32, 0, 0, 1000); // Wait 1 second
+      }
     } catch (e: any) {
-      // taskkill returns code 128 if process is not found. We only log other errors.
       if (e.status !== 128) {
         console.warn('Warning: Could not kill existing daemon instance:', e.message)
       }

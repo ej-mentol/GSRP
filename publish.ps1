@@ -1,5 +1,8 @@
 # GSRP Release Publisher Script
 
+Write-Host "--- Terminating active processes ---" -ForegroundColor Yellow
+try { taskkill /F /IM GSRP.Daemon.exe /T /FI "STATUS eq RUNNING" | Out-Null } catch {}
+
 Write-Host "--- Checking Environment ---" -ForegroundColor Yellow
 
 # Check Node.js

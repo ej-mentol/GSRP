@@ -25,55 +25,64 @@ namespace GSRP.Daemon.Services
 
         public async Task InitializeAsync()
         {
-            await Task.Run(() => {
-                using var conn = new SqliteConnection(_connectionString);
-                conn.Open();
-                
-                var walCmd = conn.CreateCommand();
-                walCmd.CommandText = "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;";
-                walCmd.ExecuteNonQuery();
-
-                var cmd = conn.CreateCommand();
-                // NULL-POLICY SCHEMA: Removed 'DEFAULT' for optional string fields to allow settings-based fallbacks
-                cmd.CommandText = @"
-                    CREATE TABLE IF NOT EXISTS players (
-                        steam_id64 TEXT PRIMARY KEY,
-                        alias TEXT,
-                        txt_color TEXT,
-                        avatarhash TEXT,
-                        timecreated INTEGER DEFAULT 0,
-                        personaname TEXT,
-                        last_updated INTEGER DEFAULT 0,
-                        iconname TEXT,
-                        stm_color TEXT,
-                        profile_status INTEGER,
-                        is_community_banned INTEGER,
-                        number_of_vac_bans INTEGER DEFAULT 0,
-                        number_of_game_bans INTEGER DEFAULT 0,
-                        last_vac_check INTEGER,
-                        economy_ban TEXT,
-                        ban_date INTEGER DEFAULT 0,
-                        alias_color TEXT,
-                        card_color TEXT
-                    );
-                    CREATE INDEX IF NOT EXISTS idx_steam_id64 ON players(steam_id64);
-                    CREATE INDEX IF NOT EXISTS idx_personaname ON players(personaname);
-                    CREATE INDEX IF NOT EXISTS idx_alias ON players(alias);
-                ";
-                cmd.ExecuteNonQuery();
-
-                // Schema Migration: Check for 'card_color' (added in v2.1)
+            int retries = 0;
+            while (retries < 5) {
                 try {
-                    var checkCmd = conn.CreateCommand();
-                    checkCmd.CommandText = "SELECT card_color FROM players LIMIT 1";
-                    checkCmd.ExecuteNonQuery();
-                } catch {
-                    // Column missing, add it
-                    var alterCmd = conn.CreateCommand();
-                    alterCmd.CommandText = "ALTER TABLE players ADD COLUMN card_color TEXT";
-                    alterCmd.ExecuteNonQuery();
+                    using var conn = new SqliteConnection(_connectionString);
+                    conn.Open();
+                    
+                    var walCmd = conn.CreateCommand();
+                    walCmd.CommandText = "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;";
+                    walCmd.ExecuteNonQuery();
+
+                    var cmd = conn.CreateCommand();
+                    // ... (schema creation)
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS players (
+                            steam_id64 TEXT PRIMARY KEY,
+                            alias TEXT,
+                            txt_color TEXT,
+                            avatarhash TEXT,
+                            timecreated INTEGER DEFAULT 0,
+                            personaname TEXT,
+                            last_updated INTEGER DEFAULT 0,
+                            iconname TEXT,
+                            stm_color TEXT,
+                            profile_status INTEGER,
+                            is_community_banned INTEGER,
+                            number_of_vac_bans INTEGER DEFAULT 0,
+                            number_of_game_bans INTEGER DEFAULT 0,
+                            last_vac_check INTEGER,
+                            economy_ban TEXT,
+                            ban_date INTEGER DEFAULT 0,
+                            alias_color TEXT,
+                            card_color TEXT
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_steam_id64 ON players(steam_id64);
+                        CREATE INDEX IF NOT EXISTS idx_personaname ON players(personaname);
+                        CREATE INDEX IF NOT EXISTS idx_alias ON players(alias);
+                    ";
+                    cmd.ExecuteNonQuery();
+
+                    // Schema Migration: Check for 'card_color' (added in v2.1)
+                    try {
+                        var checkCmd = conn.CreateCommand();
+                        checkCmd.CommandText = "SELECT card_color FROM players LIMIT 1";
+                        checkCmd.ExecuteNonQuery();
+                    } catch {
+                        var alterCmd = conn.CreateCommand();
+                        alterCmd.CommandText = "ALTER TABLE players ADD COLUMN card_color TEXT";
+                        alterCmd.ExecuteNonQuery();
+                    }
+                    
+                    return; // Success!
+                } catch (SqliteException ex) when (ex.SqliteErrorCode == 5) { // 5 = SQLITE_BUSY
+                    retries++;
+                    await Task.Delay(200);
+                } catch { 
+                    break; 
                 }
-            });
+            }
         }
 
         public async Task<List<Player>> SearchPlayersAsync(string term, bool caseSensitive = false, string? colorFilter = null, bool vacBanned = false, bool gameBanned = false, bool communityBanned = false, bool economyBanned = false)

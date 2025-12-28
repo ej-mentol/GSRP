@@ -39,8 +39,24 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
     const [history, setHistory] = useState<string[]>([]);
     const [historyIndex, setHistoryIndex] = useState(-1);
     const [autoScroll, setAutoScroll] = useState(true);
+    const [isConnected, setIsConnected] = useState(false);
     const logEndRef = useRef<HTMLDivElement>(null);
     const logAreaRef = useRef<HTMLDivElement>(null);
+
+    const toggleConnection = () => {
+        if (isConnected) {
+            window.ipcRenderer?.sendToBackend('UDP_STOP', {});
+            setIsConnected(false);
+            addMessage('UDP Listener Stopped', 'SYS');
+        } else {
+            // Assuming listen port is targetPort - 1 or same as setting. 
+            // In GSRP typical setup: Listen on 26000, Send to 26001.
+            // Let's use 26000 as the standard listen port.
+            window.ipcRenderer?.sendToBackend('UDP_START', { port: 26000 });
+            setIsConnected(true);
+            addMessage('UDP Listener Starting on port 26000...', 'SYS');
+        }
+    };
 
     const handleScroll = () => {
         if (!logAreaRef.current) return;
@@ -180,6 +196,13 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
         <div className={styles.container}>
             <div className={styles.toolbar}>
                 <div className={styles.filterGroup}>
+                    <button 
+                        className={`${styles.tagFilter} ${isConnected ? styles.connected : styles.disconnected}`}
+                        onClick={toggleConnection}
+                    >
+                        {isConnected ? 'Stop Chat' : 'Connect Chat'}
+                    </button>
+                    <div className={styles.divider} />
                     {(['CHAT', 'GAME', 'NET', 'SYS', 'STUFF', 'USER', 'LOG'] as LogTag[]).map(tag => (
                         <button 
                             key={tag}

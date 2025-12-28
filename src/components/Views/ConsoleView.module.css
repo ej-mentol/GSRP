@@ -37,6 +37,25 @@
     border-color: var(--border-bright);
 }
 
+.divider {
+    width: 1px;
+    height: 20px;
+    background-color: var(--border-subtle);
+    margin: 0 10px;
+}
+
+.connected {
+    border-color: var(--accent-green) !important;
+    color: var(--accent-green) !important;
+    background-color: rgba(16, 185, 129, 0.1) !important;
+}
+
+.disconnected {
+    border-color: var(--accent-red) !important;
+    color: var(--accent-red) !important;
+    background-color: rgba(239, 68, 68, 0.1) !important;
+}
+
 .tagFilterActive {
     border-color: currentColor;
     background-color: rgba(255, 255, 255, 0.05);

@@ -137,6 +137,21 @@ namespace GSRP.Daemon.Core
                             }
                         }
                         break;
+
+                    case "UDP_START":
+                        {
+                            if (doc.RootElement.TryGetProperty("payload", out var payload)) {
+                                var port = payload.GetProperty("port").GetInt32();
+                                _udp.Start(port);
+                            }
+                        }
+                        break;
+
+                    case "UDP_STOP":
+                        {
+                            _udp.Stop();
+                        }
+                        break;
                 }
             } catch (Exception ex) {
                 _sendToElectron("CONSOLE_LOG", new LogData("SYS", $"IPC Error: {ex.Message}"));

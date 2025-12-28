@@ -75,7 +75,7 @@ namespace GSRP.Daemon
             _clipboard.Start();
 
             _ = Task.Run(ListenIpcAsync);
-            _ = Task.Run(() => _udpService.Start(udpPort));
+            // UDP service will be started manually via IPC command
 
             await Task.Delay(-1);
         }
