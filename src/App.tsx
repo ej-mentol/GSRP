@@ -45,6 +45,8 @@ function App() {
     const [migrationData, setMigrationData] = useState<{ recordCount: number, progress: number, status: string } | null>(null);
     const [isAppReady, setIsAppReady] = useState(false);
     const [initError, setInitError] = useState<string | null>(null);
+    const [initStatusMsg, setInitStatusMsg] = useState('Initializing Core Engine...');
+    const [initProgress, setInitProgress] = useState(0);
 
     const [editorModalConfig, setEditorModalConfig] = useState<{ isOpen: boolean, player: Player | null } | null>(null);
     const [onlyBans, setOnlyBans] = useState(false);
@@ -54,6 +56,35 @@ function App() {
     const [udpTargetPort, setUdpTargetPort] = useState(26001);
     const [selectedQuickTags, setSelectedQuickTags] = useState<string[]>([]);
     const [playerForImage, setPlayerForImage] = useState<Player | null>(null);
+
+    useEffect(() => {
+        let pollTimer: any;
+        if (!isAppReady && !migrationData) {
+            pollTimer = setInterval(async () => {
+                try {
+                    const res = await fetch('http://localhost:5000/health');
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.details) setInitStatusMsg(data.details);
+                        if (data.progress) setInitProgress(data.progress);
+                        
+                        if (data.state === 'Ready') {
+                            setIsAppReady(true);
+                        } else if (data.migrationRequiredCount > 0) {
+                            setMigrationData({ 
+                                recordCount: data.migrationRequiredCount, 
+                                progress: 0, 
+                                status: 'Database upgrade needed (recovered)' 
+                            });
+                        }
+                    }
+                } catch (e) {
+                    setInitStatusMsg('Waiting for daemon process...');
+                }
+            }, 1000);
+        }
+        return () => clearInterval(pollTimer);
+    }, [isAppReady, migrationData]);
 
     useEffect(() => {
         const unsubscribe = window.ipcRenderer?.onBackend((msg) => {
@@ -66,7 +97,7 @@ function App() {
                 case 'UPDATE_PLAYER':
                     const updater = (list: Player[]) => list.map(p => {
                         if (p.steamId64 === msg.data.steamId64) {
-                            return { ...p, ...msg.data };
+                            return { ...p, ...msg.data, displayName: msg.data.displayName || p.displayName };
                         }
                         return p;
                     });
@@ -125,12 +156,14 @@ function App() {
     };
 
     const handleSaveCustomization = (updated: Player) => {
-        const sid = updated.steamId64;
-        window.ipcRenderer?.sendToBackend('SET_ALIAS', { steamId: sid, alias: updated.alias });
-        window.ipcRenderer?.sendToBackend('SET_COLOR', { steamId: sid, color: updated.playerColor, target: 'game' });
-        window.ipcRenderer?.sendToBackend('SET_COLOR', { steamId: sid, color: updated.personaNameColor, target: 'steam' });
-        window.ipcRenderer?.sendToBackend('SET_COLOR', { steamId: sid, color: updated.aliasColor, target: 'alias' });
-        window.ipcRenderer?.sendToBackend('SET_COLOR', { steamId: sid, color: updated.cardColor, target: 'card' });
+        window.ipcRenderer?.sendToBackend('SAVE_CUSTOMIZATION', { 
+            steamId: updated.steamId64, 
+            alias: updated.alias,
+            gameColor: updated.playerColor,
+            steamColor: updated.personaNameColor,
+            aliasColor: updated.aliasColor,
+            cardColor: updated.cardColor
+        });
         setEditorModalConfig(null);
     };
 
@@ -214,7 +247,17 @@ function App() {
     if (!isAppReady) return (
         <div className="appContainer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <WindowControls />
-            {initError ? <div style={{ color: 'var(--accent-red)' }}>⚠️ <h2>System Error</h2><p>{initError}</p><button onClick={() => window.location.reload()}>Restart</button></div> : <div style={{ textAlign: 'center' }}><div className="loader"></div><p style={{ marginTop: 20, color: 'var(--text-secondary)' }}>Initializing Core Engine...</p></div>}
+            {initError ? 
+                <div style={{ color: 'var(--accent-red)' }}>⚠️ <h2>System Error</h2><p>{initError}</p><button onClick={() => window.location.reload()}>Restart</button></div> 
+                : 
+                <div style={{ textAlign: 'center', width: 300 }}>
+                    <div className="loader"></div>
+                    <p style={{ marginTop: 20, color: 'var(--text-secondary)' }}>{initStatusMsg}</p>
+                    <div style={{ width: '100%', height: 4, background: 'var(--bg-secondary)', marginTop: 10, borderRadius: 2 }}>
+                        <div style={{ width: `${initProgress}%`, height: '100%', background: 'var(--accent-blue)', borderRadius: 2, transition: 'width 0.3s' }} />
+                    </div>
+                </div>
+            }
         </div>
     );
 
