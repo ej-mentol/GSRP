@@ -11,12 +11,14 @@ namespace GSRP.Daemon.Services
         public string CheckSql { get; set; }
         public string FixSql { get; set; }
         public bool Enabled { get; set; }
+        public bool IsSchemaChange { get; set; }
 
-        public MigrationRule(string name, string checkSql, string fixSql, bool enabled = true) {
+        public MigrationRule(string name, string checkSql, string fixSql, bool enabled = true, bool isSchemaChange = false) {
             Name = name;
             CheckSql = checkSql;
             FixSql = fixSql;
             Enabled = enabled;
+            IsSchemaChange = isSchemaChange;
         }
     }
 
@@ -25,25 +27,29 @@ namespace GSRP.Daemon.Services
         private readonly string _connectionString;
         private readonly string _dbPath;
 
-        // --- REGISTRY OF MIGRATION RULES ---
         private readonly List<MigrationRule> _rules = new()
         {
             new MigrationRule(
-                "Colors: Cleanup 0 and Empty strings",
+                "Schema: Add card_color column",
+                "SELECT COUNT(*) FROM pragma_table_info('players') WHERE name='card_color'",
+                "ALTER TABLE players ADD COLUMN card_color TEXT;",
+                true, true
+            ),
+            new MigrationRule(
+                "Colors: Cleanup markers",
                 @"SELECT COUNT(*) FROM players 
                   WHERE (txt_color IN ('0', '')) 
                      OR (stm_color IN ('0', '')) 
                      OR (alias_color IN ('0', ''))",
                 @"UPDATE players SET txt_color = NULL WHERE txt_color IN ('0', '');
                   UPDATE players SET stm_color = NULL WHERE stm_color IN ('0', '');
-                  UPDATE players SET alias_color = NULL WHERE alias_color IN ('0', '');",
-                false // DISABLED: '0' might be used by frontend
+                  UPDATE players SET alias_color = NULL WHERE alias_color IN ('0', '');"
             ),
             new MigrationRule(
-                "Economy: Cleanup 'none' and '0' markers",
-                "SELECT COUNT(*) FROM players WHERE economy_ban IN ('none', '0', '')",
-                "UPDATE players SET economy_ban = NULL WHERE economy_ban IN ('none', '0', '');",
-                false // DISABLED: We now use 'none' explicitly
+                "Cleanup: Remove legacy logs table",
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='logs'",
+                "DROP TABLE IF EXISTS logs;",
+                true, true
             )
         };
 
@@ -51,7 +57,7 @@ namespace GSRP.Daemon.Services
         {
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             _dbPath = Path.Combine(appData, "GSRP", "gsrp.db");
-            _connectionString = $"Data Source={_dbPath}";
+            _connectionString = $"Data Source={_dbPath};Mode=ReadWriteCreate;Cache=Shared";
         }
 
         public async Task<int> GetTotalAffectedCountAsync()
@@ -62,10 +68,19 @@ namespace GSRP.Daemon.Services
                     using var conn = new SqliteConnection(_connectionString);
                     conn.Open();
                     foreach (var rule in _rules) {
-                        if (!rule.Enabled) continue;
-                        using var cmd = conn.CreateCommand();
-                        cmd.CommandText = rule.CheckSql;
-                        total += Convert.ToInt32(cmd.ExecuteScalar());
+                        try {
+                            using var cmd = conn.CreateCommand();
+                            cmd.CommandText = rule.CheckSql;
+                            var result = Convert.ToInt32(cmd.ExecuteScalar());
+                            
+                            if (rule.IsSchemaChange) {
+                                if (result == 0) total += 1;
+                            } else {
+                                total += result;
+                            }
+                        } catch { 
+                            if (!rule.IsSchemaChange) total += 1; 
+                        }
                     }
                 } catch { }
                 return total;
@@ -83,15 +98,28 @@ namespace GSRP.Daemon.Services
 
                     using var conn = new SqliteConnection(_connectionString);
                     conn.Open();
-                    using var trans = conn.BeginTransaction();
                     foreach (var rule in _rules) {
-                        if (!rule.Enabled) continue;
-                        using var cmd = conn.CreateCommand();
-                        cmd.Transaction = trans;
-                        cmd.CommandText = rule.FixSql;
-                        cmd.ExecuteNonQuery();
+                        try {
+                            bool needsFix = false;
+                            using (var checkCmd = conn.CreateCommand()) {
+                                checkCmd.CommandText = rule.CheckSql;
+                                var res = Convert.ToInt32(checkCmd.ExecuteScalar());
+                                needsFix = rule.IsSchemaChange ? (res == 0) : (res > 0);
+                            }
+
+                            if (needsFix) {
+                                using var fixCmd = conn.CreateCommand();
+                                fixCmd.CommandText = rule.FixSql;
+                                fixCmd.ExecuteNonQuery();
+                            }
+                        } catch { 
+                            try {
+                                using var fixCmd = conn.CreateCommand();
+                                fixCmd.CommandText = rule.FixSql;
+                                fixCmd.ExecuteNonQuery();
+                            } catch { }
+                        }
                     }
-                    trans.Commit();
                 } catch { }
             });
         }
