@@ -16,8 +16,10 @@ namespace GSRP.Daemon.Core
         private readonly EnrichmentCoordinator _coordinator;
         private readonly UdpConsoleService _udp; // New
         private readonly Action<string, object?> _sendToElectron;
+        private readonly Action<int> _setMigrationCount;
+        private TaskCompletionSource<bool>? _migrationTcs;
 
-        public IpcHandler(StorageService storage, DatabaseMigrationService migration, SteamApiService steamApi, EnrichmentCoordinator coordinator, UdpConsoleService udp, Action<string, object?> sendToElectron)
+        public IpcHandler(StorageService storage, DatabaseMigrationService migration, SteamApiService steamApi, EnrichmentCoordinator coordinator, UdpConsoleService udp, Action<string, object?> sendToElectron, Action<int> setMigrationCount)
         {
             _storage = storage;
             _migration = migration;
@@ -25,6 +27,7 @@ namespace GSRP.Daemon.Core
             _coordinator = coordinator;
             _udp = udp;
             _sendToElectron = sendToElectron;
+            _setMigrationCount = setMigrationCount;
         }
 
         public async Task InitializeAsync()
@@ -33,7 +36,11 @@ namespace GSRP.Daemon.Core
             
             int legacyCount = await _migration.GetTotalAffectedCountAsync();
             if (legacyCount > 0) {
+                _migrationTcs = new TaskCompletionSource<bool>();
+                _setMigrationCount(legacyCount);
                 _sendToElectron("MIGRATION_REQUIRED", new MigrationData(legacyCount));
+                await _migrationTcs.Task; // Wait for explicit migration command
+                _setMigrationCount(0);
             } else {
                 _sendToElectron("READY", null);
             }
@@ -52,6 +59,7 @@ namespace GSRP.Daemon.Core
                             _sendToElectron("MIGRATION_PROGRESS", new ProgressData(50, "Cleaning legacy color markers..."));
                             await _migration.RunMigrationsAsync(backup);
                             _sendToElectron("MIGRATION_SUCCESS", null);
+                            _migrationTcs?.TrySetResult(true);
                         }
                         break;
 
@@ -92,30 +100,34 @@ namespace GSRP.Daemon.Core
 
                     case "SET_ALIAS":
                         {
-                            var saId = doc.RootElement.GetProperty("payload").GetProperty("steamId").GetString();
-                            var alias = doc.RootElement.GetProperty("payload").GetProperty("alias").GetString();
-                            if (!string.IsNullOrEmpty(saId)) {
-                                var p = await _storage.GetPlayerAsync(saId) ?? new Player { SteamId64 = saId };
-                                p.Alias = alias;
-                                await _storage.SavePlayerAsync(p);
-                                _sendToElectron("UPDATE_PLAYER", p);
+                            if (doc.RootElement.TryGetProperty("payload", out var payload)) {
+                                var saId = payload.GetProperty("steamId").GetString();
+                                var alias = payload.TryGetProperty("alias", out var aProp) ? aProp.GetString() : null;
+                                if (!string.IsNullOrEmpty(saId)) {
+                                    var p = await _storage.GetPlayerAsync(saId) ?? new Player { SteamId64 = saId };
+                                    p.Alias = alias;
+                                    await _storage.SavePlayerAsync(p);
+                                    _sendToElectron("UPDATE_PLAYER", p);
+                                }
                             }
                         }
                         break;
 
                     case "SET_COLOR":
                         {
-                            var scId = doc.RootElement.GetProperty("payload").GetProperty("steamId").GetString();
-                            var color = doc.RootElement.GetProperty("payload").GetProperty("color").GetString();
-                            var target = doc.RootElement.GetProperty("payload").GetProperty("target").GetString(); 
-                            if (!string.IsNullOrEmpty(scId)) {
-                                var p = await _storage.GetPlayerAsync(scId) ?? new Player { SteamId64 = scId };
-                                if (target == "game") p.PlayerColor = color;
-                                else if (target == "steam") p.PersonaNameColor = color;
-                                else if (target == "alias") p.AliasColor = color;
-                                else if (target == "card") p.CardColor = color;
-                                await _storage.SavePlayerAsync(p);
-                                _sendToElectron("UPDATE_PLAYER", p);
+                            if (doc.RootElement.TryGetProperty("payload", out var payload)) {
+                                var scId = payload.GetProperty("steamId").GetString();
+                                var color = payload.TryGetProperty("color", out var cProp) ? cProp.GetString() : null;
+                                var target = payload.GetProperty("target").GetString(); 
+                                if (!string.IsNullOrEmpty(scId)) {
+                                    var p = await _storage.GetPlayerAsync(scId) ?? new Player { SteamId64 = scId };
+                                    if (target == "game") p.PlayerColor = color;
+                                    else if (target == "steam") p.PersonaNameColor = color;
+                                    else if (target == "alias") p.AliasColor = color;
+                                    else if (target == "card") p.CardColor = color;
+                                    await _storage.SavePlayerAsync(p);
+                                    _sendToElectron("UPDATE_PLAYER", p);
+                                }
                             }
                         }
                         break;
@@ -150,6 +162,26 @@ namespace GSRP.Daemon.Core
                     case "UDP_STOP":
                         {
                             _udp.Stop();
+                        }
+                        break;
+
+                    case "SAVE_CUSTOMIZATION":
+                        {
+                            if (doc.RootElement.TryGetProperty("payload", out var payload)) {
+                                var sid = payload.GetProperty("steamId").GetString();
+                                if (!string.IsNullOrEmpty(sid)) {
+                                    var p = await _storage.GetPlayerAsync(sid) ?? new Player { SteamId64 = sid };
+                                    
+                                    if (payload.TryGetProperty("alias", out var a)) p.Alias = a.GetString();
+                                    if (payload.TryGetProperty("gameColor", out var gc)) p.PlayerColor = gc.GetString();
+                                    if (payload.TryGetProperty("steamColor", out var sc)) p.PersonaNameColor = sc.GetString();
+                                    if (payload.TryGetProperty("aliasColor", out var ac)) p.AliasColor = ac.GetString();
+                                    if (payload.TryGetProperty("cardColor", out var cc)) p.CardColor = cc.GetString();
+
+                                    await _storage.SavePlayerAsync(p);
+                                    _sendToElectron("UPDATE_PLAYER", p);
+                                }
+                            }
                         }
                         break;
                 }
