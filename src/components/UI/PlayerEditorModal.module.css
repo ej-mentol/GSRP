@@ -72,15 +72,19 @@
     padding: 2px 4px;
     border-radius: 4px;
     transition: all 0.2s;
+    width: fit-content;
+    display: block;
 }
 
 .targetText:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(255, 255, 255, 0.03);
+    outline: 1px dashed var(--border-bright);
 }
 
 .targetActive {
-    background-color: rgba(59, 130, 246, 0.1) !important;
-    box-shadow: 0 0 0 1px var(--accent-blue);
+    background-color: transparent !important;
+    outline: 2px solid var(--accent-blue) !important;
+    outline-offset: 2px;
 }
 
 .targetBadge {
@@ -89,10 +93,16 @@
     padding: 4px 10px;
     border-radius: 6px;
     transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.targetBadge:hover {
+    filter: brightness(1.1);
 }
 
 .badgeActive {
-    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent-blue);
+    border-color: #fff !important;
+    box-shadow: 0 0 0 2px var(--accent-blue);
 }
 
 .stripeZone {
@@ -151,30 +161,54 @@
 
 .hexInputGroup {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     align-items: center;
 }
 
 .hexInputWrapper {
     position: relative;
     flex: 1;
+    cursor: pointer;
+}
+
+.slotActive .hexInput {
+    border-color: var(--accent-blue);
+    background-color: rgba(59, 130, 246, 0.05);
+    box-shadow: 0 0 0 1px var(--accent-blue);
 }
 
 .hexInput {
     background-color: var(--bg-sidebar);
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
-    padding: 10px 10px 10px 28px;
+    padding: 10px 30px 10px 28px;
     border-radius: 8px;
     font-size: 13px;
     font-family: 'JetBrains Mono', monospace;
     width: 100%;
     outline: none;
     text-transform: uppercase;
+    transition: all 0.2s;
 }
 
-.hexInput:focus {
-    border-color: var(--accent-blue);
+.removeGradBtn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.removeGradBtn:hover {
+    color: var(--accent-red);
 }
 
 .hexHash {
