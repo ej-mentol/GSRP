@@ -36,6 +36,7 @@ namespace GSRP.Daemon.Core
 
         public async Task ProcessDetectedPlayersAsync(List<Player> players)
         {
+            _sendToElectron("CONSOLE_LOG", new LogData("SYS", $"Enriching {players.Count} players..."));
             var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var toUpdate = new List<string>();
 

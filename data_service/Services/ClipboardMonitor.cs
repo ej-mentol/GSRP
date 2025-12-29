@@ -32,15 +32,26 @@ namespace GSRP.Daemon.Services
             _thread = new Thread(Run) { IsBackground = true };
             _thread.SetApartmentState(ApartmentState.STA);
             _thread.Start();
+            Console.Error.WriteLine("[Clipboard] Monitor thread started (STA).");
         }
 
         private void Run() {
             IntPtr hwnd = CreateWindowEx(0, "Static", "GSRP_Mon", 0, 0, 0, 0, 0, HWND_MESSAGE, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
-            if (hwnd == IntPtr.Zero) return;
-            AddClipboardFormatListener(hwnd);
+            if (hwnd == IntPtr.Zero) {
+                Console.Error.WriteLine("[Clipboard] FATAL: Could not create message window.");
+                return;
+            }
+            
+            if (!AddClipboardFormatListener(hwnd)) {
+                Console.Error.WriteLine("[Clipboard] FATAL: Failed to add format listener.");
+            }
+
+            Console.Error.WriteLine("[Clipboard] Window created, listening...");
+
             MSG msg;
             while (_running && GetMessage(out msg, IntPtr.Zero, 0, 0) != 0) {
                 if (msg.message == WM_CLIPBOARDUPDATE) {
+                    Console.Error.WriteLine("[Clipboard] OS Signal: Update detected.");
                     string t = GetText();
                     if (!string.IsNullOrEmpty(t)) ClipboardChanged?.Invoke(t);
                 }
@@ -60,6 +71,7 @@ namespace GSRP.Daemon.Services
             } finally { CloseClipboard(); }
         }
 
-        public void Dispose() => _running = false;
+        public void Stop() => _running = false;
+        public void Dispose() => Stop();
     }
 }
