@@ -2,7 +2,7 @@
 
 This is your "smart" player table. GSRP is a specialized desktop application designed to act as a "smart TAB button". Its primary function is to quickly identify players from copied game console output (e.g., `status` command), providing immediate, relevant information without needing to access friends lists or remember complex IDs. It offers a clean, efficient output for on-the-fly player identification.
 
-**Note:** This version is a reimplementation using Electron (frontend) and .NET 9 (native backend).
+**Note:** This version is a reimplementation using Electron (frontend) and .NET 10 (native backend).
 
 ## Important Notes
 
@@ -41,7 +41,7 @@ A terminal for viewing game logs and chat via UDP.
 
 ### Prerequisites
 *   [Node.js](https://nodejs.org/) (v18+)
-*   [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9) (for building the backend)
+*   [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10) (for building the backend)
 *   [Steam Web API Key](https://steamcommunity.com/dev/apikey)
 
 ### Building from Source
@@ -61,11 +61,11 @@ A terminal for viewing game logs and chat via UDP.
     ```
     *This starts the Vite server and automatically spawns the C# backend.*
 
-4.  Build for release (Portable):
+4.  Build for release:
     ```bash
-    yarn build
+    .\publish.ps1
     ```
-    *This compiles the .NET backend and packages the Electron app into `dist/win-unpacked`.*
+    *This script builds the application and creates a ready-to-use archive in `dist/release`.*
 
 ### Data Location
 The database (`gsrp.db`) and settings are stored in:
