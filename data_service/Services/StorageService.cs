@@ -35,11 +35,11 @@ namespace GSRP.Daemon.Services
                 cmd.CommandText = @"
                     CREATE TABLE IF NOT EXISTS players (
                         steam_id64 TEXT PRIMARY KEY,
-                        alias TEXT,
+                        alias TEXT COLLATE NOCASE,
                         txt_color TEXT,
                         avatarhash TEXT,
                         timecreated INTEGER DEFAULT 0,
-                        personaname TEXT,
+                        personaname TEXT COLLATE NOCASE,
                         last_updated INTEGER DEFAULT 0,
                         iconname TEXT,
                         stm_color TEXT,
@@ -53,11 +53,15 @@ namespace GSRP.Daemon.Services
                         alias_color TEXT,
                         card_color TEXT
                     );
+                    CREATE INDEX IF NOT EXISTS idx_comm_status ON players(is_community_banned, profile_status);
                     CREATE INDEX IF NOT EXISTS idx_steam_id64 ON players(steam_id64);
+                    CREATE INDEX IF NOT EXISTS idx_stm_color ON players(stm_color);
+                    CREATE INDEX IF NOT EXISTS idx_txt_color ON players(txt_color);
+                    CREATE INDEX IF NOT EXISTS idx_game_status ON players(number_of_game_bans, ban_date);
                     CREATE INDEX IF NOT EXISTS idx_personaname ON players(personaname);
                     CREATE INDEX IF NOT EXISTS idx_alias ON players(alias);
-                    CREATE INDEX IF NOT EXISTS idx_txt_color ON players(txt_color);
                     CREATE INDEX IF NOT EXISTS idx_card_color ON players(card_color);
+                    CREATE INDEX IF NOT EXISTS idx_vac_status ON players(number_of_vac_bans, last_vac_check);
                 ";
                 await cmd.ExecuteNonQueryAsync();
             } catch (Exception ex) {

@@ -36,6 +36,12 @@ namespace GSRP.Daemon.Services
                 true, true
             ),
             new MigrationRule(
+                "Schema: Add alias_color column",
+                "SELECT COUNT(*) FROM pragma_table_info('players') WHERE name='alias_color'",
+                "ALTER TABLE players ADD COLUMN alias_color TEXT;",
+                true, true
+            ),
+            new MigrationRule(
                 "Colors: Cleanup markers",
                 @"SELECT COUNT(*) FROM players 
                   WHERE (txt_color IN ('0', '')) 
@@ -46,10 +52,19 @@ namespace GSRP.Daemon.Services
                   UPDATE players SET alias_color = NULL WHERE alias_color IN ('0', '');"
             ),
             new MigrationRule(
+                "Index: Cleanup & Optimization",
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_vac_status'",
+                @"CREATE INDEX IF NOT EXISTS idx_comm_status ON players(is_community_banned, profile_status);
+                  CREATE INDEX IF NOT EXISTS idx_stm_color ON players(stm_color);
+                  CREATE INDEX IF NOT EXISTS idx_game_status ON players(number_of_game_bans, ban_date);
+                  CREATE INDEX IF NOT EXISTS idx_vac_status ON players(number_of_vac_bans, last_vac_check);",
+                true, true
+            ),
+            new MigrationRule(
                 "Cleanup: Remove legacy logs table",
                 "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='logs'",
                 "DROP TABLE IF EXISTS logs;",
-                true, true
+                true, false
             )
         };
 

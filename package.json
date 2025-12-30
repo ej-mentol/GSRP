@@ -1,7 +1,7 @@
 {
   "name": "gsrp-electron",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
@@ -20,10 +20,12 @@
     ],
     "extraResources": [
       {
-        "from": "./data_service/bin/Release/net9.0-windows/win-x64/publish",
+        "from": "./data_service/bin/Release/net10.0-windows/win-x64/publish",
         "to": "bin",
         "filter": [
-          "**/*"
+          "**/*",
+          "!**/*.pdb",
+          "!**/web.config"
         ]
       }
     ],

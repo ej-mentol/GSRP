@@ -58,6 +58,27 @@ if (!(Test-Path $sourceDir)) {
 $destPath = Join-Path (Get-Location) "$releaseDir/$name.zip"
 if (Test-Path $destPath) { Remove-Item $destPath -Force }
 
+Write-Host "--- Cleaning debug symbols (.pdb) ---" -ForegroundColor Yellow
+Get-ChildItem -Path $sourceDir -Filter *.pdb -Recurse | Remove-Item -Force
+
+Write-Host "--- Cleaning unnecessary locales ---" -ForegroundColor Yellow
+$localesDir = Join-Path $sourceDir "locales"
+if (Test-Path $localesDir) {
+    Get-ChildItem -Path $localesDir -Exclude "ru.pak", "en-US.pak" | Remove-Item -Force
+}
+
+Write-Host "--- Cleaning other unnecessary files ---" -ForegroundColor Yellow
+$filesToRemove = @(
+    "LICENSE.electron.txt",
+    "LICENSES.chromium.html",
+    "resources/bin/web.config"
+)
+
+foreach ($file in $filesToRemove) {
+    $path = Join-Path $sourceDir $file
+    if (Test-Path $path) { Remove-Item $path -Force }
+}
+
 Write-Host "--- Archiving build to $destPath ---" -ForegroundColor Green
 
 # Use .NET System.IO.Compression for reliability (handles long paths and symlinks better)
