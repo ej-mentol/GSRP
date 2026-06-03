@@ -14,6 +14,7 @@
     <StackTraceSupport>true</StackTraceSupport>
     <!-- Подавляем ложные предупреждения о платформе, так как мы явно указали windows -->
     <SupportedOSPlatform>windows</SupportedOSPlatform>
+    <Version>0.3.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
