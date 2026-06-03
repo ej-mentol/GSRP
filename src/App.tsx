@@ -1,147 +1,52 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { toPng } from 'html-to-image'
-import { Player } from './types'
-import { PlayerCard } from './components/PlayerCard/PlayerCard'
-import { ShareablePlayerCard } from './components/PlayerCard/ShareablePlayerCard'
-import { Header } from './components/Layout/Header'
-import { Sidebar } from './components/Layout/Sidebar'
-import { WindowControls } from './components/Layout/WindowControls'
-import { ContextMenu } from './components/UI/ContextMenu'
-import { DatabaseView } from './components/Views/DatabaseView'
-import { SettingsView } from './components/Views/SettingsView'
-import { ReportView } from './components/Views/ReportView'
-import { ConsoleView } from './components/Views/ConsoleView'
-import { MigrationView } from './components/Views/MigrationView'
-import { PlayerEditorModal } from './components/UI/PlayerEditorModal'
-import { buildPlayerMainMenu, buildAvatarMenu } from './menus/playerMenu'
-import { buildInputMenu } from './menus/inputMenu'
-import { defaultSettings } from './data/mockSettings'
-import { Search, Filter, SortAsc, Copy } from 'lucide-react'
-import './App.css'
+import React, { useState, useMemo, useCallback } from 'react';
+import { toPng } from 'html-to-image';
+import { Player } from './types';
+import { PlayerCard } from './components/PlayerCard/PlayerCard';
+import { ShareablePlayerCard } from './components/PlayerCard/ShareablePlayerCard';
+import { Header } from './components/Layout/Header';
+import { Sidebar } from './components/Layout/Sidebar';
+import { WindowControls } from './components/Layout/WindowControls';
+import { ContextMenu } from './components/UI/ContextMenu';
+import { DatabaseView } from './components/Views/DatabaseView';
+import { SettingsView } from './components/Views/SettingsView';
+import { ReportView } from './components/Views/ReportView';
+import { ConsoleView } from './components/Views/ConsoleView';
+import { MigrationView } from './components/Views/MigrationView';
+import { PlayerEditorModal } from './components/UI/PlayerEditorModal';
+import { buildPlayerMainMenu, buildAvatarMenu } from './menus/playerMenu';
+import { buildInputMenu } from './menus/inputMenu';
+import { defaultSettings } from './data/mockSettings';
+import { Search, Filter, SortAsc, Copy } from 'lucide-react';
+import './App.css';
+
+// Hooks
+import { useDaemon } from './hooks/useDaemon';
+import { useAppSettings } from './hooks/useAppSettings';
+import { usePlayersData } from './hooks/usePlayersData';
+import { useDatabaseSearch } from './hooks/useDatabaseSearch';
 
 function App() {
     const [activeTab, setActiveTab] = useState('Players');
     const [playersSearchTerm, setPlayersSearchTerm] = useState('');
-    const [dbSearchTerm, setDbSearchTerm] = useState('');
-    const [dbSearchCaseSensitive, setDbSearchCaseSensitive] = useState(false);
-    const [dbSearchColor, setDbSearchColor] = useState<string | null>(null);
-    const [dbSearchVac, setDbSearchVac] = useState(false);
-    const [dbSearchGame, setDbSearchGame] = useState(false);
-    const [dbSearchComm, setDbSearchComm] = useState(false);
-    const [dbSearchEco, setDbSearchEco] = useState(false);
-    const [isDbLoading, setIsDbLoading] = useState(false);
+    const [onlyBans, setOnlyBans] = useState(false);
 
-    const [players, setPlayers] = useState<Player[]>([]);
-    const [dbResults, setDbResults] = useState<Player[]>([]);
-    const [availableIcons, setAvailableIcons] = useState<string[]>([]);
-    const [servers, setServers] = useState<string[]>(defaultSettings.servers);
-    const [enableAvatarCdn, setEnableAvatarCdn] = useState(true);
-    const [favoriteColors, setFavoriteColors] = useState<string[]>(['#ff4444', '#66ccff', '#ffd700', '#10b981', '#a855f7']);
     const [reportTargets, setReportTargets] = useState<Player[]>([]);
-
     const [reportData, setReportData] = useState({ server: '', tags: [] as string[], details: '', template: '', prefix: '`', suffix: '`' });
     const [copyStatus, setCopyStatus] = useState('Copy Report');
 
-    const [migrationData, setMigrationData] = useState<{ recordCount: number, progress: number, status: string } | null>(null);
-    const [isAppReady, setIsAppReady] = useState(false);
-    const [initError, setInitError] = useState<string | null>(null);
-    const [initStatusMsg, setInitStatusMsg] = useState('Initializing Core Engine...');
-    const [initProgress, setInitProgress] = useState(0);
-
     const [editorModalConfig, setEditorModalConfig] = useState<{ isOpen: boolean, player: Player | null } | null>(null);
-    const [onlyBans, setOnlyBans] = useState(false);
-
     const [menuConfig, setMenuConfig] = useState<{ x: number, y: number, player?: Player, type: 'main' | 'avatar' | 'input', element?: any } | null>(null);
-    const [udpTargetIp, setUdpTargetIp] = useState('127.0.0.1');
-    const [udpTargetPort, setUdpTargetPort] = useState(26001);
     const [selectedQuickTags, setSelectedQuickTags] = useState<string[]>([]);
     const [playerForImage, setPlayerForImage] = useState<Player | null>(null);
 
-    useEffect(() => {
-        let pollTimer: any;
-        if (!isAppReady && !migrationData) {
-            pollTimer = setInterval(async () => {
-                try {
-                    const res = await fetch('http://localhost:5000/health');
-                    if (res.ok) {
-                        const data = await res.json();
-                        if (data.details) setInitStatusMsg(data.details);
-                        if (data.progress) setInitProgress(data.progress);
-                        
-                        if (data.state === 'Ready') {
-                            setIsAppReady(true);
-                        } else if (data.migrationRequiredCount > 0) {
-                            setMigrationData({ 
-                                recordCount: data.migrationRequiredCount, 
-                                progress: 0, 
-                                status: 'Database upgrade needed (recovered)' 
-                            });
-                        }
-                    }
-                } catch (e) {
-                    setInitStatusMsg('Waiting for daemon process...');
-                }
-            }, 1000);
-        }
-        return () => clearInterval(pollTimer);
-    }, [isAppReady, migrationData]);
-
-    useEffect(() => {
-        const unsubscribe = window.ipcRenderer?.onBackend((msg) => {
-            switch (msg.type) {
-                case 'READY': setIsAppReady(true); setMigrationData(null); break;
-                case 'MIGRATION_REQUIRED': setMigrationData({ recordCount: msg.data.count, progress: 0, status: 'Database upgrade needed' }); break;
-                case 'MIGRATION_PROGRESS': setMigrationData(prev => prev ? { ...prev, progress: msg.data.percent, status: msg.data.status } : null); break;
-                case 'MIGRATION_SUCCESS': setIsAppReady(true); setMigrationData(null); break;
-                case 'PLAYERS_DETECTED': setPlayers(msg.data.players); break;
-                case 'UPDATE_PLAYER':
-                    const updater = (list: Player[]) => list.map(p => {
-                        if (p.steamId64 === msg.data.steamId64) {
-                            return { ...p, ...msg.data, displayName: msg.data.displayName || p.displayName };
-                        }
-                        return p;
-                    });
-                    setPlayers(prev => updater(prev));
-                    setDbResults(prev => updater(prev));
-                    break;
-                case 'SEARCH_RESULT': 
-                    setDbResults(msg.data.players || []); 
-                    setIsDbLoading(false);
-                    break;
-            }
-        });
-
-        window.ipcRenderer?.on('backend-crash', (_e, code) => {
-            setInitError(`Core Engine Failed (Exit Code: ${code})`);
-            setIsAppReady(false);
-        });
-
-        const initData = async () => {
-            const s = await window.ipcRenderer?.invoke('get-setting', 'servers');
-            if (Array.isArray(s)) setServers(s);
-            const colors = await window.ipcRenderer?.invoke('get-setting', 'favoriteColors');
-            if (Array.isArray(colors)) setFavoriteColors(colors);
-            const cdn = await window.ipcRenderer?.invoke('get-setting', 'enableAvatarCdn');
-            if (cdn !== undefined && cdn !== null) setEnableAvatarCdn(!!cdn);
-            const uIp = await window.ipcRenderer?.invoke('get-setting', 'udpTargetIp');
-            const uPort = await window.ipcRenderer?.invoke('get-setting', 'udpTargetPort');
-            if (uIp) setUdpTargetIp(uIp);
-            if (uPort) setUdpTargetPort(Number(uPort));
-            const icons = await window.ipcRenderer?.invoke('scan-icons');
-            if (icons) setAvailableIcons(icons);
-        };
-        initData();
-        return () => unsubscribe?.();
-    }, []);
-
-    const refreshSettings = async () => {
-        const s = await window.ipcRenderer?.invoke('get-setting', 'servers');
-        if (Array.isArray(s)) setServers(s);
-        const colors = await window.ipcRenderer?.invoke('get-setting', 'favoriteColors');
-        if (Array.isArray(colors)) setFavoriteColors(colors);
-        const cdn = await window.ipcRenderer?.invoke('get-setting', 'enableAvatarCdn');
-        if (cdn !== undefined && cdn !== null) setEnableAvatarCdn(!!cdn);
-    };
+    // Custom Hooks
+    const { isAppReady, initError, initStatusMsg, initProgress, migrationData, startMigration } = useDaemon();
+    const { servers, enableAvatarCdn, favoriteColors, colorGroups, availableIcons, udpTargetIp, udpTargetPort, refreshSettings, updateServers, addFavoriteColor, removeFavoriteColor, updateColorGroups } = useAppSettings();
+    const { players } = usePlayersData();
+    const { 
+        dbSearchTerm, dbSearchCaseSensitive, dbSearchColor, dbSearchVac, dbSearchGame, dbSearchComm, dbSearchEco, 
+        dbResults, dbUniqueColors, isDbLoading, setDbFilters 
+    } = useDatabaseSearch();
 
     const copyImage = async (player: Player) => {
         setPlayerForImage(player);
@@ -174,11 +79,6 @@ function App() {
         setActiveTab('Report');
     };
     const handleRemoveFromReport = (player: Player) => setReportTargets(prev => prev.filter(t => t.steamId64 !== player.steamId64));
-    const handleUpdateServers = (newServers: string[]) => {
-        setServers(newServers);
-        window.ipcRenderer?.send('save-setting', { key: 'servers', value: newServers });
-        window.ipcRenderer?.sendToBackend('UPDATE_SETTING', {});
-    };
 
     const handleGlobalCopyReport = useCallback(() => {
         const { server, details, template, prefix, suffix } = reportData;
@@ -197,21 +97,6 @@ function App() {
             setMenuConfig({ x: e.clientX, y: e.clientY, type: 'input', element: target });
         }
     };
-
-    const dbSearchHandler = (t: string, cs: boolean, color: string | null, vac: boolean, game: boolean, comm: boolean, eco: boolean) => {
-        setDbSearchTerm(t); setDbSearchCaseSensitive(cs); setDbSearchColor(color); setDbSearchVac(vac); setDbSearchGame(game); setDbSearchComm(comm); setDbSearchEco(eco);
-    };
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            const hasFilters = dbSearchColor || dbSearchVac || dbSearchGame || dbSearchComm || dbSearchEco;
-            if (hasFilters || (dbSearchTerm && dbSearchTerm.trim().length > 0)) {
-                setIsDbLoading(true);
-                window.ipcRenderer?.sendToBackend('SEARCH_DB', { t: dbSearchTerm, caseSensitive: dbSearchCaseSensitive, color: dbSearchColor, vacBanned: dbSearchVac, gameBanned: dbSearchGame, communityBanned: dbSearchComm, economyBanned: dbSearchEco });
-            } else if (!dbSearchTerm && !hasFilters) setDbResults([]);
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [dbSearchTerm, dbSearchCaseSensitive, dbSearchColor, dbSearchVac, dbSearchGame, dbSearchComm, dbSearchEco]);
 
     const menuItems = useMemo(() => {
         if (!menuConfig) return [];
@@ -240,7 +125,7 @@ function App() {
     if (migrationData) return (
         <>
             <WindowControls />
-            <MigrationView recordCount={migrationData.recordCount} progress={migrationData.progress} status={migrationData.status} onStart={(backup) => window.ipcRenderer?.sendToBackend('START_MIGRATION', { backup })} />
+            <MigrationView recordCount={migrationData.recordCount} progress={migrationData.progress} status={migrationData.status} onStart={startMigration} />
         </>
     );
 
@@ -290,23 +175,40 @@ function App() {
                         )}
                         {activeTab === 'DB Search' && (
                             <div className="scrollableContent">
-                                <DatabaseView searchTerm={dbSearchTerm} onSearchChange={dbSearchHandler} players={dbResults} enableAvatarCdn={enableAvatarCdn} favoriteColors={favoriteColors}
+                                <DatabaseView 
+                                    searchTerm={dbSearchTerm} 
+                                    selectedColor={dbSearchColor}
+                                    onSearchChange={setDbFilters} 
+                                    players={dbResults} 
+                                    enableAvatarCdn={enableAvatarCdn} 
+                                    favoriteColors={favoriteColors}
+                                    colorGroups={colorGroups}
+                                    dbUniqueColors={dbUniqueColors}
+                                    onUpdateGroups={updateColorGroups}
+                                    onAddFavoriteColor={addFavoriteColor}
+                                    onRemoveFavoriteColor={removeFavoriteColor}
                                     onContextMenu={(e, p) => { e.preventDefault(); setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'main' }); }}
                                     onAvatarContextMenu={(e, p) => { e.preventDefault(); e.stopPropagation(); setMenuConfig({ x: e.clientX, y: e.clientY, player: p, type: 'avatar' }); }}
-                                    vacBanned={dbSearchVac} gameBanned={dbSearchGame} communityBanned={dbSearchComm} economyBanned={dbSearchEco} caseSensitive={dbSearchCaseSensitive} isLoading={isDbLoading} />
+                                    vacBanned={dbSearchVac} 
+                                    gameBanned={dbSearchGame} 
+                                    communityBanned={dbSearchComm} 
+                                    economyBanned={dbSearchEco} 
+                                    caseSensitive={dbSearchCaseSensitive} 
+                                    isLoading={isDbLoading} 
+                                />
                             </div>
                         )}
-                        {activeTab === 'Report' && <div className="scrollableContent"><ReportView allPlayers={players} reportTargets={reportTargets} onAddTarget={handleAddToReport} onRemoveTarget={handleRemoveFromReport} servers={servers} onUpdateServers={handleUpdateServers} onReportChange={setReportData} /></div>}
+                        {activeTab === 'Report' && <div className="scrollableContent"><ReportView allPlayers={players} reportTargets={reportTargets} onAddTarget={handleAddToReport} onRemoveTarget={handleRemoveFromReport} servers={servers} onUpdateServers={updateServers} onReportChange={setReportData} /></div>}
                         {activeTab === 'Settings' && <div className="scrollableContent"><SettingsView onSettingsSaved={refreshSettings} /></div>}
                         {activeTab === 'Console' && <ConsoleView targetIp={udpTargetIp} targetPort={udpTargetPort} />}
                     </main>
                 </div>
             </div>
             {playerForImage && <ShareablePlayerCard player={playerForImage} />}
-            {editorModalConfig?.isOpen && <PlayerEditorModal isOpen={true} onClose={() => setEditorModalConfig(null)} player={editorModalConfig.player} favoriteColors={favoriteColors} onSave={handleSaveCustomization} />}
+            {editorModalConfig?.isOpen && <PlayerEditorModal isOpen={true} onClose={() => setEditorModalConfig(null)} player={editorModalConfig.player} favoriteColors={favoriteColors} dbUniqueColors={dbUniqueColors} onSave={handleSaveCustomization} onAddFavoriteColor={addFavoriteColor} onRemoveFavoriteColor={removeFavoriteColor} />}
             {menuConfig && <ContextMenu x={menuConfig.x} y={menuConfig.y} items={menuItems} onClose={() => setMenuConfig(null)} />}
         </div>
-    )
+    );
 }
 
-export default App
+export default App;

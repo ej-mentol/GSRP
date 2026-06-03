@@ -10,6 +10,7 @@ namespace GSRP.Daemon.Core
     public record StatusData(string Status);
     public record ProgressData(int Percent, string Status);
     public record IpcMessage(string Type, object? Data);
+    public record LocalIpsData(List<string> Ips);
     public record HealthResponse(string Status, string Detail);
     public record LogData(string Tag, string Text);
     public record DaemonState(string State, string Step, int Progress, string Details, int MigrationRequiredCount = 0);
@@ -26,11 +27,13 @@ namespace GSRP.Daemon.Core
     [JsonSerializable(typeof(IpcMessage))]
     [JsonSerializable(typeof(Player))]
     [JsonSerializable(typeof(List<Player>))]
+    [JsonSerializable(typeof(List<string>))]
     [JsonSerializable(typeof(MigrationData))]
     [JsonSerializable(typeof(DetectedData))]
     [JsonSerializable(typeof(SearchResultsData))]
     [JsonSerializable(typeof(StatusData))]
     [JsonSerializable(typeof(ProgressData))]
+    [JsonSerializable(typeof(LocalIpsData))]
     [JsonSerializable(typeof(LogData))]
     [JsonSerializable(typeof(HealthResponse))]
     [JsonSerializable(typeof(DaemonState))]

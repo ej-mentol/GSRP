@@ -7,6 +7,12 @@ import { promisify } from 'node:util'
 
 const execAsync = promisify(exec)
 
+// --- PROTOCOL REGISTRATION (Must be before app ready) ---
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'gsrp-icon', privileges: { secure: true, standard: true, corsEnabled: true, bypassCSP: true, stream: true, supportFetchAPI: true } },
+  { scheme: 'gsrp-cache', privileges: { secure: true, standard: true, corsEnabled: true, bypassCSP: true, stream: true, supportFetchAPI: true } }
+])
+
 // --- ENVIRONMENT ---
 process.env.DIST = path.join(__dirname, '../dist')
 process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : path.join(__dirname, '../public')
@@ -116,7 +122,6 @@ async function spawnBackend() {
 
   if (isDev) {
     exePath = 'dotnet';
-    // Убираем --no-build, чтобы dotnet сам следил за актуальностью кода
     args = ['run', '--project', path.join(__dirname, '../data_service/GSRP.Daemon.csproj')];
   } else {
     exePath = path.join(process.resourcesPath, 'bin', 'GSRP.Daemon.exe')
@@ -133,17 +138,14 @@ async function spawnBackend() {
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed) continue;
-
-      // Пытаемся понять: это наш JSON или просто текст?
       try {
         if (trimmed.startsWith('{')) {
-          JSON.parse(trimmed); // Проверка на валидность
+          JSON.parse(trimmed);
           safeSend('backend-message', trimmed);
         } else {
           throw new Error('Not JSON');
         }
       } catch (e) {
-        // Это сырой текст или лог dotnet - пакуем в CONSOLE_LOG
         const wrappedLog = JSON.stringify({ 
           type: "CONSOLE_LOG", 
           data: { tag: "SYS", text: trimmed } 
@@ -193,6 +195,11 @@ function registerIpcHandlers() {
   })
 
   ipcMain.on('open-external', (_, url) => shell.openExternal(url))
+  ipcMain.on('open-external-path', (_, subPath) => {
+    const fullPath = path.join(app.getPath('userData'), subPath);
+    if (!fs.existsSync(fullPath)) fs.mkdirSync(fullPath, { recursive: true });
+    shell.openPath(fullPath);
+  });
   ipcMain.on('copy-image', (_, dataUrl) => {
     try {
       const img = nativeImage.createFromDataURL(dataUrl)
@@ -201,7 +208,7 @@ function registerIpcHandlers() {
   })
   ipcMain.handle('get-setting', (_, key) => {
     try {
-      const p = path.join(app.getPath('appData'), 'GSRP', 'settings.json')
+      const p = path.join(app.getPath('userData'), 'settings.json')
       if (fs.existsSync(p)) {
         const s = JSON.parse(fs.readFileSync(p, 'utf-8'))
         const k = Object.keys(s).find(x => x.toLowerCase() === key.toLowerCase())
@@ -212,7 +219,7 @@ function registerIpcHandlers() {
   })
   ipcMain.on('save-setting', (_, { key, value }) => {
     try {
-      const p = path.join(app.getPath('appData'), 'GSRP', 'settings.json')
+      const p = path.join(app.getPath('userData'), 'settings.json')
       const dir = path.dirname(p)
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
       const s = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf-8')) : {}
@@ -222,10 +229,17 @@ function registerIpcHandlers() {
   })
   ipcMain.handle('scan-icons', async () => {
     try {
-      const p = path.join(app.getPath('appData'), 'GSRP', 'icons')
+      const p = path.join(app.getPath('userData'), 'icons')
       if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true })
       return fs.readdirSync(p).filter(f => ['.png', '.svg'].includes(path.extname(f).toLowerCase()))
     } catch (e) { return [] }
+  })
+  ipcMain.handle('debug-get-paths', () => {
+    return {
+        userData: app.getPath('userData'),
+        appData: app.getPath('appData'),
+        iconsDir: path.join(app.getPath('userData'), 'icons')
+    };
   })
 }
 
@@ -234,14 +248,7 @@ function createWindow() {
     width: 1200, height: 800, minWidth: 800, minHeight: 600, frame: false, backgroundColor: '#1e1f23',
     titleBarStyle: 'hidden',
     icon: path.join(process.env.VITE_PUBLIC!, 'electron-vite.svg'),
-    webPreferences: { preload: path.join(__dirname, 'preload.js') },
-  })
-
-  protocol.handle('gsrp-icon', (req) => {
-    const file = decodeURIComponent(new URL(req.url).hostname || new URL(req.url).pathname.replace(/^\//, ''))
-    const p = path.join(app.getPath('appData'), 'GSRP', 'icons', file)
-    const final = fs.existsSync(p) ? p : (fs.existsSync(p + '.png') ? p + '.png' : null)
-    return final ? net.fetch(pathToFileURL(final).toString()) : new Response(null, { status: 404 })
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), devTools: true },
   })
 
   if (VITE_DEV_SERVER_URL) win.loadURL(VITE_DEV_SERVER_URL)
@@ -262,6 +269,69 @@ app.on('will-quit', async (e) => {
 })
 
 app.whenReady().then(async () => {
+  protocol.handle('gsrp-icon', async (req) => {
+    let file = decodeURIComponent(req.url.replace('gsrp-icon://', ''));
+    if (file.endsWith('/')) file = file.slice(0, -1);
+
+    const userDataIcons = path.join(app.getPath('userData'), 'icons');
+    const roamingGsrpIcons = path.join(app.getPath('appData'), 'gsrp', 'icons');
+    
+    const searchPaths = [
+        path.join(userDataIcons, file),
+        path.join(roamingGsrpIcons, file)
+    ];
+
+    const extensions = ['', '.png', '.svg', '.jpg', '.jpeg'];
+    
+    for (const basePath of searchPaths) {
+        for (const ext of extensions) {
+            const tryPath = basePath + ext;
+            if (fs.existsSync(tryPath) && fs.statSync(tryPath).isFile()) {
+                console.log(`[IconProtocol] SUCCESS: Found at ${tryPath}`);
+                const response = await net.fetch(pathToFileURL(tryPath).toString());
+                const headers = new Headers(response.headers);
+                headers.set('Access-Control-Allow-Origin', '*');
+                return new Response(response.body, {
+                  status: response.status,
+                  statusText: response.statusText,
+                  headers
+                });
+            }
+            const lowerPath = (basePath + ext).toLowerCase();
+            if (fs.existsSync(lowerPath) && fs.statSync(lowerPath).isFile()) {
+                console.log(`[IconProtocol] SUCCESS: Found at ${lowerPath} (lowercase)`);
+                const response = await net.fetch(pathToFileURL(lowerPath).toString());
+                const headers = new Headers(response.headers);
+                headers.set('Access-Control-Allow-Origin', '*');
+                return new Response(response.body, {
+                  status: response.status,
+                  statusText: response.statusText,
+                  headers
+                });
+            }
+        }
+    }
+
+    console.error(`[IconProtocol] FAILED: Could not find ${file} in either ${userDataIcons} or ${roamingGsrpIcons}`);
+    return new Response(null, { 
+      status: 404,
+      headers: { 'Access-Control-Allow-Origin': '*' }
+    });
+  })
+
+  protocol.handle('gsrp-cache', (req) => {
+    let file = decodeURIComponent(req.url.replace('gsrp-cache://', ''));
+    if (file.endsWith('/')) file = file.slice(0, -1);
+    
+    const p1 = path.join(app.getPath('userData'), 'cache', file);
+    const p2 = path.join(app.getPath('appData'), 'gsrp', 'cache', file);
+    
+    if (fs.existsSync(p1)) return net.fetch(pathToFileURL(p1).toString());
+    if (fs.existsSync(p2)) return net.fetch(pathToFileURL(p2).toString());
+    
+    return new Response(null, { status: 404 });
+  })
+
   registerIpcHandlers()
   createWindow()
   await spawnBackend()

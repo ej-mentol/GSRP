@@ -88,6 +88,13 @@ namespace GSRP.Daemon.Core
                         }
                         break;
 
+                    case "GET_DB_COLORS":
+                        {
+                            var colors = await _storage.GetUniqueColorsAsync();
+                            _sendToElectron("DB_COLORS_RESULT", new { colors });
+                        }
+                        break;
+
                     case "REFRESH_PLAYER":
                         {
                             var rpId = doc.RootElement.GetProperty("payload").GetProperty("steamId").GetString();
@@ -105,8 +112,8 @@ namespace GSRP.Daemon.Core
                                 var alias = payload.TryGetProperty("alias", out var aProp) ? aProp.GetString() : null;
                                 if (!string.IsNullOrEmpty(saId)) {
                                     var p = await _storage.GetPlayerAsync(saId) ?? new Player { SteamId64 = saId };
-                                    p.Alias = alias;
-                                    await _storage.SavePlayerAsync(p);
+                                    await _storage.UpdatePlayerCustomizationAsync(saId, alias, p.PlayerColor, p.PersonaNameColor, p.AliasColor, p.CardColor);
+                                    p.Alias = alias; // Optimistic update
                                     _sendToElectron("UPDATE_PLAYER", p);
                                 }
                             }
@@ -125,7 +132,21 @@ namespace GSRP.Daemon.Core
                                     else if (target == "steam") p.PersonaNameColor = color;
                                     else if (target == "alias") p.AliasColor = color;
                                     else if (target == "card") p.CardColor = color;
-                                    await _storage.SavePlayerAsync(p);
+                                    await _storage.UpdatePlayerCustomizationAsync(scId, p.Alias, p.PlayerColor, p.PersonaNameColor, p.AliasColor, p.CardColor);
+                                    _sendToElectron("UPDATE_PLAYER", p);
+                                }
+                            }
+                        }
+                        break;
+
+                    case "SET_ICON":
+                        {
+                            if (doc.RootElement.TryGetProperty("payload", out var payload)) {
+                                var scId = payload.GetProperty("steamId").GetString();
+                                var icon = payload.TryGetProperty("icon", out var iProp) ? iProp.GetString() : null;
+                                if (!string.IsNullOrEmpty(scId)) {
+                                    await _storage.UpdatePlayerIconAsync(scId, icon);
+                                    var p = await _storage.GetPlayerAsync(scId) ?? new Player { SteamId64 = scId };
                                     _sendToElectron("UPDATE_PLAYER", p);
                                 }
                             }
@@ -150,11 +171,38 @@ namespace GSRP.Daemon.Core
                         }
                         break;
 
+                    case "GET_LOCAL_IPS":
+                        {
+                            var ips = new List<string> { "0.0.0.0", "127.0.0.1" };
+                            try {
+                                foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()) {
+                                    // Include interfaces that are Up or just not Down (to be safe)
+                                    if (ni.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up || 
+                                        ni.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Unknown) {
+                                        
+                                        var props = ni.GetIPProperties();
+                                        foreach (var ip in props.UnicastAddresses) {
+                                            if (ip.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) {
+                                                string addr = ip.Address.ToString();
+                                                ips.Add(addr);
+                                                _sendToElectron("CONSOLE_LOG", new LogData("SYS", $"[Net] Detected interface: {ni.Name} ({addr})"));
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (Exception ex) {
+                                _sendToElectron("CONSOLE_LOG", new LogData("SYS", $"[Net] Interface detection error: {ex.Message}"));
+                            }
+                            _sendToElectron("LOCAL_IPS_RESULT", new LocalIpsData(ips.Distinct().OrderBy(x => x).ToList()));
+                        }
+                        break;
+
                     case "UDP_START":
                         {
                             if (doc.RootElement.TryGetProperty("payload", out var payload)) {
                                 var port = payload.GetProperty("port").GetInt32();
-                                _udp.Start(port);
+                                var ip = payload.TryGetProperty("ip", out var ipProp) ? ipProp.GetString() ?? "0.0.0.0" : "0.0.0.0";
+                                _udp.Start(port, ip);
                             }
                         }
                         break;
@@ -170,15 +218,16 @@ namespace GSRP.Daemon.Core
                             if (doc.RootElement.TryGetProperty("payload", out var payload)) {
                                 var sid = payload.GetProperty("steamId").GetString();
                                 if (!string.IsNullOrEmpty(sid)) {
-                                    var p = await _storage.GetPlayerAsync(sid) ?? new Player { SteamId64 = sid };
-                                    
-                                    if (payload.TryGetProperty("alias", out var a)) p.Alias = a.GetString();
-                                    if (payload.TryGetProperty("gameColor", out var gc)) p.PlayerColor = gc.GetString();
-                                    if (payload.TryGetProperty("steamColor", out var sc)) p.PersonaNameColor = sc.GetString();
-                                    if (payload.TryGetProperty("aliasColor", out var ac)) p.AliasColor = ac.GetString();
-                                    if (payload.TryGetProperty("cardColor", out var cc)) p.CardColor = cc.GetString();
+                                    string? a = payload.TryGetProperty("alias", out var ap) ? ap.GetString() : null;
+                                    string? gc = payload.TryGetProperty("gameColor", out var gcp) ? gcp.GetString() : null;
+                                    string? sc = payload.TryGetProperty("steamColor", out var scp) ? scp.GetString() : null;
+                                    string? ac = payload.TryGetProperty("aliasColor", out var acp) ? acp.GetString() : null;
+                                    string? cc = payload.TryGetProperty("cardColor", out var ccp) ? ccp.GetString() : null;
 
-                                    await _storage.SavePlayerAsync(p);
+                                    await _storage.UpdatePlayerCustomizationAsync(sid, a, gc, sc, ac, cc);
+                                    
+                                    // Send optimistic update back to UI
+                                    var p = await _storage.GetPlayerAsync(sid) ?? new Player { SteamId64 = sid };
                                     _sendToElectron("UPDATE_PLAYER", p);
                                 }
                             }

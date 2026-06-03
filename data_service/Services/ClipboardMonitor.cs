@@ -51,7 +51,6 @@ namespace GSRP.Daemon.Services
             MSG msg;
             while (_running && GetMessage(out msg, IntPtr.Zero, 0, 0) != 0) {
                 if (msg.message == WM_CLIPBOARDUPDATE) {
-                    Console.Error.WriteLine("[Clipboard] OS Signal: Update detected.");
                     string t = GetText();
                     if (!string.IsNullOrEmpty(t)) ClipboardChanged?.Invoke(t);
                 }

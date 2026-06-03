@@ -100,8 +100,14 @@ namespace GSRP.Daemon.Services
                 }
 
                 if (!string.IsNullOrEmpty(colorFilter)) {
-                    conditions.Add("(txt_color = @c COLLATE NOCASE OR stm_color = @c COLLATE NOCASE OR alias_color = @c COLLATE NOCASE OR card_color = @c COLLATE NOCASE)");
-                    cmd.Parameters.AddWithValue("@c", colorFilter);
+                    var colors = colorFilter.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                    var colorConditions = new List<string>();
+                    for (int i = 0; i < colors.Length; i++) {
+                        var pName = $"@c{i}";
+                        colorConditions.Add($"txt_color = {pName} COLLATE NOCASE OR stm_color = {pName} COLLATE NOCASE OR alias_color = {pName} COLLATE NOCASE OR card_color = {pName} COLLATE NOCASE");
+                        cmd.Parameters.AddWithValue(pName, colors[i].Trim());
+                    }
+                    conditions.Add("(" + string.Join(" OR ", colorConditions) + ")");
                 }
 
                 if (vacBanned) conditions.Add("number_of_vac_bans > 0");
@@ -109,10 +115,12 @@ namespace GSRP.Daemon.Services
                 if (communityBanned) conditions.Add("is_community_banned = 1");
                 if (economyBanned) conditions.Add("(economy_ban IS NOT NULL AND economy_ban != 'none' AND economy_ban != '0')");
 
-                if (conditions.Count == 0) return results;
-
-                int limit = (!string.IsNullOrEmpty(colorFilter) || vacBanned || gameBanned || communityBanned || economyBanned) ? 5000 : 2000;
-                cmd.CommandText = "SELECT * FROM players WHERE " + string.Join(" AND ", conditions) + $" LIMIT {limit}";
+                if (conditions.Count == 0) {
+                    cmd.CommandText = "SELECT * FROM players ORDER BY last_updated DESC LIMIT 200";
+                } else {
+                    int limit = (!string.IsNullOrEmpty(colorFilter) || vacBanned || gameBanned || communityBanned || economyBanned) ? 10000 : 2000;
+                    cmd.CommandText = "SELECT * FROM players WHERE " + string.Join(" AND ", conditions) + $" ORDER BY last_updated DESC LIMIT {limit}";
+                }
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync()) results.Add(MapPlayerFromReader(reader));
@@ -211,6 +219,67 @@ namespace GSRP.Daemon.Services
             } catch (Exception ex) { Console.Error.WriteLine($"[Storage] Save Error: {ex.Message}"); }
         }
 
+        public async Task UpdatePlayerCustomizationAsync(string steamId64, string? alias, string? gameColor, string? steamColor, string? aliasColor, string? cardColor)
+        {
+            try {
+                using var conn = GetConnection();
+                await conn.OpenAsync();
+                using var cmd = conn.CreateCommand();
+
+                object? ToDb(string? val) => (string.IsNullOrWhiteSpace(val) || val == "0" || val == "none") ? DBNull.Value : val;
+
+                cmd.CommandText = @"
+                    UPDATE players SET 
+                        alias = @alias,
+                        txt_color = @gameColor,
+                        stm_color = @steamColor,
+                        alias_color = @aliasColor,
+                        card_color = @cardColor
+                    WHERE steam_id64 = @id";
+
+                cmd.Parameters.AddWithValue("@id", steamId64);
+                cmd.Parameters.AddWithValue("@alias", ToDb(alias));
+                cmd.Parameters.AddWithValue("@gameColor", ToDb(gameColor));
+                cmd.Parameters.AddWithValue("@steamColor", ToDb(steamColor));
+                cmd.Parameters.AddWithValue("@aliasColor", ToDb(aliasColor));
+                cmd.Parameters.AddWithValue("@cardColor", ToDb(cardColor));
+
+                int updated = await cmd.ExecuteNonQueryAsync();
+                
+                // If the player doesn't exist yet, we create an empty shell with these customizations.
+                if (updated == 0)
+                {
+                    cmd.CommandText = @"
+                        INSERT INTO players (steam_id64, alias, txt_color, stm_color, alias_color, card_color) 
+                        VALUES (@id, @alias, @gameColor, @steamColor, @aliasColor, @cardColor)";
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+            } catch (Exception ex) { Console.Error.WriteLine($"[Storage] UpdateCustomization Error: {ex.Message}"); }
+        }
+
+        public async Task UpdatePlayerIconAsync(string steamId64, string? iconName)
+        {
+            try {
+                using var conn = GetConnection();
+                await conn.OpenAsync();
+                using var cmd = conn.CreateCommand();
+
+                cmd.CommandText = "UPDATE players SET iconname = @icon WHERE steam_id64 = @id";
+                cmd.Parameters.AddWithValue("@id", steamId64);
+                cmd.Parameters.AddWithValue("@icon", (object?)iconName ?? DBNull.Value);
+
+                int updated = await cmd.ExecuteNonQueryAsync();
+                
+                if (updated == 0)
+                {
+                    cmd.CommandText = "INSERT INTO players (steam_id64, iconname) VALUES (@id, @icon)";
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+            } catch (Exception ex) { Console.Error.WriteLine($"[Storage] UpdateIcon Error: {ex.Message}"); }
+        }
+
         public async Task DeletePlayerAsync(string steamId64)
         {
             try {
@@ -221,6 +290,31 @@ namespace GSRP.Daemon.Services
                 cmd.Parameters.AddWithValue("@id", steamId64);
                 await cmd.ExecuteNonQueryAsync();
             } catch { }
+        }
+
+        public async Task<List<string>> GetUniqueColorsAsync()
+        {
+            var colors = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try {
+                using var conn = GetConnection();
+                await conn.OpenAsync();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT txt_color FROM players WHERE txt_color IS NOT NULL AND txt_color != '' AND txt_color != '0' AND txt_color != 'none'
+                    UNION 
+                    SELECT stm_color FROM players WHERE stm_color IS NOT NULL AND stm_color != '' AND stm_color != '0' AND stm_color != 'none'
+                    UNION 
+                    SELECT alias_color FROM players WHERE alias_color IS NOT NULL AND alias_color != '' AND alias_color != '0' AND alias_color != 'none'
+                    UNION 
+                    SELECT card_color FROM players WHERE card_color IS NOT NULL AND card_color != '' AND card_color != '0' AND card_color != 'none'";
+                
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync()) {
+                    var c = reader.GetString(0);
+                    if (!string.IsNullOrWhiteSpace(c)) colors.Add(c.Trim());
+                }
+            } catch (Exception ex) { Console.Error.WriteLine($"[Storage] UniqueColors Error: {ex.Message}"); }
+            return new List<string>(colors);
         }
 
         private string SteamId64To2(string sid64) {

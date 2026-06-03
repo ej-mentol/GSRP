@@ -111,12 +111,13 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         const cornerMap: Record<number, string> = { 0: styles['top-left'], 1: styles['top-right'], 2: styles['bottom-left'], 3: styles['bottom-right'] };
         const posClass = cornerMap[defaultSettings.iconCorner] || styles['bottom-right'];
         const iconUrl = `gsrp-icon://${player.iconName}`;
+        
         return (
             <div className={`${styles.rankIconContainer} ${posClass}`}>
                 {player.iconName.endsWith('.svg') ? (
                     <div className={styles.rankIconSvg} style={{ backgroundColor: player.iconColor || '#fff', maskImage: `url(${iconUrl})`, WebkitMaskImage: `url(${iconUrl})` }} />
                 ) : (
-                    <img src={iconUrl} className={styles.rankIconImg} alt="rank" crossOrigin="anonymous" />
+                    <img src={iconUrl} className={styles.rankIconImg} alt="rank" />
                 )}
             </div>
         );
@@ -141,18 +142,20 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             style={cardStyle}
             onContextMenu={(e) => onContextMenu(e, player)}
         >
-            <div className={`${styles.avatarContainer} ${isNewPlayer ? styles.newPlayerRing : ''}`} onContextMenu={(e) => { e.stopPropagation(); onAvatarContextMenu(e, player); }}>
-                {avatarUrl && !imgError ? (
-                    <img
-                        src={avatarUrl}
-                        className={styles.avatar}
-                        style={{ opacity: 1 }}
-                        onError={handleImgError}
-                        loading="lazy"
-                    />
-                ) : (
-                    <div className={styles.avatarFallback}>{getInitials(player.displayName)}</div>
-                )}
+            <div className={styles.avatarWrapper}>
+                <div className={`${styles.avatarContainer} ${isNewPlayer ? styles.newPlayerRing : ''}`} onContextMenu={(e) => { e.stopPropagation(); onAvatarContextMenu(e, player); }}>
+                    {avatarUrl && !imgError ? (
+                        <img
+                            src={avatarUrl}
+                            className={styles.avatar}
+                            style={{ opacity: 1 }}
+                            onError={handleImgError}
+                            loading="lazy"
+                        />
+                    ) : (
+                        <div className={styles.avatarFallback}>{getInitials(player.displayName)}</div>
+                    )}
+                </div>
                 {renderRankIcon()}
             </div>
 

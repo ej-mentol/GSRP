@@ -21,22 +21,25 @@ namespace GSRP.Daemon.Services
             _sendToElectron = sendToElectron;
         }
 
-        public void Start(int port)
+        public void Start(int port, string bindIp = "0.0.0.0")
         {
             if (_isListening) Stop();
 
             try
             {
-                _listener = new UdpClient(port);
+                var ipAddress = string.IsNullOrEmpty(bindIp) ? IPAddress.Any : IPAddress.Parse(bindIp);
+                _listener = new UdpClient();
                 _listener.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                _listener.Client.Bind(new IPEndPoint(ipAddress, port));
+                
                 _cts = new CancellationTokenSource();
                 _isListening = true;
                 _listenTask = Task.Run(() => ReceiveLoop(_cts.Token));
-                _sendToElectron("CONSOLE_LOG", new LogData("SYS", $"UDP Listener started on port {port}"));
+                _sendToElectron("CONSOLE_LOG", new LogData("SYS", $"UDP Listener started on {ipAddress}:{port}"));
             }
             catch (Exception ex)
             {
-                _sendToElectron("CONSOLE_LOG", new LogData("SYS", $"Failed to start UDP: {ex.Message}"));
+                _sendToElectron("CONSOLE_LOG", new LogData("SYS", $"Failed to start UDP on {bindIp}:{port}: {ex.Message}"));
             }
         }
 
@@ -52,7 +55,6 @@ namespace GSRP.Daemon.Services
                 _listener?.Dispose();
                 _listener = null;
 
-                // Ждем завершения таска, чтобы не было утечек ресурсов
                 if (_listenTask != null)
                 {
                     _listenTask.Wait(TimeSpan.FromSeconds(2));
@@ -77,22 +79,34 @@ namespace GSRP.Daemon.Services
                     var bytes = result.Buffer;
                     if (bytes.Length == 0) continue;
 
-                    string tag = "RAW";
-                    byte firstByte = bytes[0];
-                    int payloadStart = 1;
+                    // DEBUG: Log raw packet arrival
+                    _sendToElectron("CONSOLE_LOG", new LogData("RAW", $"[UDP] Packet received: {bytes.Length} bytes from {result.RemoteEndPoint}. First byte: 0x{bytes[0]:X2}"));
 
-                    switch (firstByte)
+                    string tag = "RAW";
+                    int payloadStart = 0;
+                    
+                    if (bytes.Length >= 9) 
                     {
-                        case 0x01: tag = "LOG"; break;
-                        case 0x02: tag = "CHAT"; break;
-                        case 0x03: tag = "GAME"; break;
-                        case 0x04: tag = "NET"; break;
-                        case 0x05: tag = "SYS"; break;
-                        case 0x06: tag = "STUFF"; break;
-                        default:
-                            tag = "RAW";
-                            payloadStart = 0;
-                            break;
+                        byte firstByte = bytes[0];
+                        payloadStart = 9; // Tag (1) + SteamID (8)
+                        
+                        switch (firstByte)
+                        {
+                            case 0x12: tag = "CHAT"; break;
+                            case 0x13: tag = "GAME"; break;
+                            case 0x14: tag = "NET"; break;
+                            case 0x15: tag = "SYS"; break;
+                            case 0x16: tag = "STUFF"; break;
+                            default:
+                                tag = "RAW";
+                                payloadStart = 0; 
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        tag = "RAW";
+                        payloadStart = 0;
                     }
 
                     string text = bytes.Length > payloadStart 

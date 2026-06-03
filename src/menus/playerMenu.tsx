@@ -91,6 +91,20 @@ export const buildAvatarMenu = (player: Player, availableIcons: string[], onSetI
     }
 
     if (items.length === 0) items.push({ label: 'No icons found', action: () => { } });
+
+    items.push({ separator: true });
+    items.push({ 
+        label: 'DEBUG: Show Paths', 
+        action: () => window.ipcRenderer?.invoke('debug-get-paths').then((paths: any) => {
+            alert(`Icons Folder: ${paths.iconsDir}\nUserData: ${paths.userData}`);
+        }) 
+    });
+    items.push({ 
+        label: 'Open Icons Folder', 
+        icon: <ExternalLink size={12} />, 
+        action: () => window.ipcRenderer?.send('open-external-path', 'icons') 
+    });
+
     return items;
 };
 

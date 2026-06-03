@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import styles from './PlayerEditorModal.module.css';
 import { Player } from '../../types';
-import { X, ArrowRight } from 'lucide-react';
+import { X, ArrowRight, Plus } from 'lucide-react';
 
 interface PlayerEditorModalProps {
     isOpen: boolean;
     onClose: () => void;
     player: Player | null;
     favoriteColors: string[];
+    dbUniqueColors?: string[];
     onSave: (updatedPlayer: Player) => void;
+    onAddFavoriteColor?: (color: string) => void;
+    onRemoveFavoriteColor?: (color: string) => void;
 }
 
 type TargetType = 'game' | 'steam' | 'alias' | 'card';
@@ -18,36 +21,25 @@ export const PlayerEditorModal: React.FC<PlayerEditorModalProps> = ({
     onClose,
     player,
     favoriteColors,
-    onSave
+    dbUniqueColors = [],
+    onSave,
+    onAddFavoriteColor,
+    onRemoveFavoriteColor
 }) => {
     const [editedPlayer, setEditedPlayer] = useState<Player | null>(null);
-    const [activeTarget, setActiveTarget] = useState<TargetType | null>('game');
+    const [activeTarget, setActiveTarget] = useState<TargetType | null>(null);
     const [hex1, setHex1] = useState('');
     const [hex2, setHex2] = useState('');
     const [activeSlot, setActiveSlot] = useState<0 | 1>(0);
     const [aliasText, setAliasText] = useState('');
 
-    const discordColors = ['#5865F2', '#57F287', '#FEE75C', '#ED4245', '#EB459E', '#FFFFFF'];
-    const gradients = [
-        '#5865F2;#EB459E', '#FEE75C;#ED4245', '#57F287;#3b82f6', '#3b82f6;#a855f7'
-    ];
-    const allColors = [...favoriteColors, ...discordColors.filter(c => !favoriteColors.includes(c))];
-
-    useEffect(() => {
-        if (player) {
-            setEditedPlayer({ ...player });
-            setAliasText(player.alias || '');
-        }
-    }, [player]);
-
-    useEffect(() => {
-        if (!editedPlayer || !activeTarget) return;
+    const populateHex = (target: TargetType, p: Player) => {
         let currentColor = '';
-        switch (activeTarget) {
-            case 'game': currentColor = editedPlayer.playerColor || ''; break;
-            case 'steam': currentColor = editedPlayer.personaNameColor || ''; break;
-            case 'alias': currentColor = editedPlayer.aliasColor || ''; break;
-            case 'card': currentColor = editedPlayer.cardColor || ''; break;
+        switch (target) {
+            case 'game': currentColor = p.playerColor || ''; break;
+            case 'steam': currentColor = p.personaNameColor || ''; break;
+            case 'alias': currentColor = p.aliasColor || ''; break;
+            case 'card': currentColor = p.cardColor || ''; break;
         }
         if (currentColor && currentColor.includes(';')) {
             const [c1, c2] = currentColor.split(';');
@@ -55,6 +47,25 @@ export const PlayerEditorModal: React.FC<PlayerEditorModalProps> = ({
         } else {
             setHex1(currentColor || ''); setHex2('');
             if (activeSlot === 1 && !currentColor) setActiveSlot(0);
+        }
+    };
+
+    useEffect(() => {
+        if (player) {
+            setEditedPlayer({ ...player });
+            setAliasText(player.alias || '');
+            setActiveTarget('game');
+            populateHex('game', player);
+        } else {
+            setEditedPlayer(null);
+            setActiveTarget(null);
+        }
+    }, [player?.steamId64]);
+
+    // Only populate on target switch, so typing doesn't reset it
+    useEffect(() => {
+        if (editedPlayer && activeTarget) {
+            populateHex(activeTarget, editedPlayer);
         }
     }, [activeTarget]);
 
@@ -126,15 +137,40 @@ export const PlayerEditorModal: React.FC<PlayerEditorModalProps> = ({
         const pC1 = c.split(';')[0];
         const pC2 = isPGradient ? c.split(';')[1] : pC1;
         const style = isPGradient ? { background: `linear-gradient(135deg, ${pC1}, ${pC2})` } : { backgroundColor: pC1 };
+        
         return (
-            <button key={c} className={styles.colorBtn} style={style} 
-                onClick={() => {
-                    if (isPGradient) { handleHexInputChange(pC1, pC2); setActiveSlot(0); }
-                    else { updateSpecificSlot(0, pC1); setActiveSlot(0); }
-                }}
-                onContextMenu={(e) => { e.preventDefault(); updateSpecificSlot(1, pC1); setActiveSlot(1); }}
-                title={isPGradient ? 'L-Click: Full Gradient | R-Click: Set End' : 'L-Click: Set Start | R-Click: Set End'} />
+            <div key={c} className={styles.colorBtnWrapper} style={{ position: 'relative' }}>
+                <button className={styles.colorBtn} style={style} 
+                    onClick={() => {
+                        if (isPGradient) { 
+                            handleHexInputChange(pC1, pC2); 
+                            setActiveSlot(0); 
+                        } else { 
+                            updateSpecificSlot(activeSlot, pC1); 
+                        }
+                    }}
+                    onContextMenu={(e) => { 
+                        e.preventDefault(); 
+                        e.stopPropagation();
+                        if (onRemoveFavoriteColor) {
+                            onRemoveFavoriteColor(c);
+                        } else {
+                            updateSpecificSlot(1, pC1); 
+                            setActiveSlot(1); 
+                        }
+                    }}
+                    title={isPGradient ? 'L-Click: Apply | R-Click: Delete' : 'L-Click: Apply | R-Click: Delete'} 
+                />
+            </div>
         );
+    };
+
+    const handleSaveFavorite = () => {
+        if (!onAddFavoriteColor) return;
+        const currentColor = hex1 && hex2 ? `${hex1};${hex2}` : hex1;
+        if (currentColor && currentColor !== '#') {
+            onAddFavoriteColor(currentColor);
+        }
     };
 
     const getRegistrationColor = () => {
@@ -200,12 +236,28 @@ export const PlayerEditorModal: React.FC<PlayerEditorModalProps> = ({
                                 <input className={styles.hexInput} value={hex2.replace('#','')} onChange={e => handleHexInputChange(hex1, e.target.value)} placeholder={hex2 ? "HEX 2" : "ADD"} />
                                 {hex2 && <button className={styles.removeGradBtn} onClick={(e) => { e.stopPropagation(); handleHexInputChange(hex1, ''); setActiveSlot(0); }}>✕</button>}
                             </div>
+                            {onAddFavoriteColor && (
+                                <button className={styles.saveFavBtn} onClick={handleSaveFavorite} title="Save to palette">
+                                    <Plus size={16} />
+                                </button>
+                            )}
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 4px', marginTop: -8, marginBottom: 4 }}>
                             <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 800, letterSpacing: '0.05em' }}>START</span>
                             <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 800, letterSpacing: '0.05em' }}>STOP</span>
                         </div>
-                        <div className={styles.colorGrid}>{allColors.map(renderColorBtn)}<div className={styles.divider} />{gradients.map(renderColorBtn)}</div>
+                        <div className={styles.colorGrid}>
+                            {favoriteColors.map(renderColorBtn)}
+                        </div>
+                        {dbUniqueColors.length > 0 && (
+                            <>
+                                <div style={{width: '100%', height: 1, backgroundColor: 'rgba(255,255,255,0.05)', margin: '16px 0 12px 0'}} />
+                                <div className={styles.sectionLabel}>From Database</div>
+                                <div className={styles.colorGrid}>
+                                    {dbUniqueColors.map(renderColorBtn)}
+                                </div>
+                            </>
+                        )}
                     </div>
                     <div className={styles.paletteArea}>
                         <div className={styles.sectionLabel}>Alias Text</div>

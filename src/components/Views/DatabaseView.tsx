@@ -1,14 +1,21 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import styles from './DatabaseView.module.css';
 import { Player } from '../../types';
 import { PlayerCard } from '../PlayerCard/PlayerCard';
-import { Search, SortAsc } from 'lucide-react';
+import { Search, SortAsc, ArrowUpDown } from 'lucide-react';
+import { ColorGroup } from '../../hooks/useAppSettings';
 
 interface DatabaseViewProps {
     searchTerm: string;
+    selectedColor: string | null;
     onSearchChange: (term: string, caseSensitive: boolean, color: string | null, vac: boolean, game: boolean, comm: boolean, eco: boolean) => void;
     players: Player[];
     favoriteColors: string[];
+    colorGroups?: ColorGroup[];
+    dbUniqueColors?: string[];
+    onUpdateGroups?: (groups: ColorGroup[]) => void;
+    onAddFavoriteColor?: (color: string) => void;
+    onRemoveFavoriteColor?: (color: string) => void;
     onContextMenu: (e: React.MouseEvent, player: Player) => void;
     onAvatarContextMenu: (e: React.MouseEvent, player: Player) => void;
     enableAvatarCdn?: boolean;
@@ -20,13 +27,17 @@ interface DatabaseViewProps {
     isLoading?: boolean;
 }
 
-const MOCK_COLORS = ['#ff4444', '#66ccff', '#ffd700', '#10b981', '#a855f7'];
-
 export const DatabaseView: React.FC<DatabaseViewProps> = ({
     searchTerm,
+    selectedColor,
     onSearchChange,
     players,
     favoriteColors,
+    colorGroups = [],
+    dbUniqueColors = [],
+    onUpdateGroups,
+    onAddFavoriteColor,
+    onRemoveFavoriteColor,
     onContextMenu,
     onAvatarContextMenu,
     enableAvatarCdn = true,
@@ -38,187 +49,154 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     isLoading = false
 }) => {
     const [exactMatch, setExactMatch] = useState(false);
-    const [selectedColor, setSelectedColor] = useState<string | null>(null);
     const [sortBy, setSortBy] = useState('last_updated');
-
-
-
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [sidebarWidth, setSidebarWidth] = useState(280);
-
     const [isResizing, setIsResizing] = useState(false);
     const [displayLimit, setDisplayLimit] = useState(50);
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
-
-
     useEffect(() => {
-
         window.ipcRenderer?.invoke('get-setting', 'dbSidebarWidth').then(width => {
-
             if (width) setSidebarWidth(Number(width));
-
         });
-
     }, []);
-
-
 
     const startResizing = useCallback((e: React.MouseEvent) => {
-
         e.preventDefault();
-
         setIsResizing(true);
-
     }, []);
 
-
-
     const stopResizing = useCallback(() => {
-
         if (isResizing) {
-
             setIsResizing(false);
-
             window.ipcRenderer?.send('save-setting', { key: 'dbSidebarWidth', value: sidebarWidth });
-
         }
-
     }, [isResizing, sidebarWidth]);
 
-
-
     const resize = useCallback((e: MouseEvent) => {
-
         if (isResizing) {
-
             const newWidth = window.innerWidth - e.clientX;
-
             if (newWidth > 200 && newWidth < 600) {
-
                 setSidebarWidth(newWidth);
-
             }
-
         }
-
     }, [isResizing]);
 
-
-
     useEffect(() => {
-
         if (isResizing) {
-
             window.addEventListener('mousemove', resize);
-
             window.addEventListener('mouseup', stopResizing);
-
         }
-
         return () => {
-
             window.removeEventListener('mousemove', resize);
-
             window.removeEventListener('mouseup', stopResizing);
-
         };
-
     }, [isResizing, resize, stopResizing]);
 
-
-
-    const filteredResults = (players || []).filter(p => {
-        // 1. Color Filter (Already applied by DB in most cases, but good for local safety)
-        if (selectedColor) {
-            const hasColorMatch = p.playerColor === selectedColor || p.personaNameColor === selectedColor || p.aliasColor === selectedColor;
-            if (!hasColorMatch) return false;
-
-            // 2. IF COLOR IS SELECTED, we do LOCAL sub-filtering by text
-            if (searchTerm && searchTerm.trim() !== '') {
-                const term = searchTerm.toLowerCase();
-                const matchName = (p.displayName?.toLowerCase() || "").includes(term) ||
-                    (p.personaName?.toLowerCase() || "").includes(term);
-                const matchId = (p.steamId2?.toLowerCase() || "").includes(term) ||
-                    (p.steamId64?.toLowerCase() || "").includes(term);
-                if (!matchName && !matchId) return false;
+    const sortedResults = useMemo(() => {
+        const orderMod = sortOrder === 'asc' ? 1 : -1;
+        return [...(players || [])].filter(p => !!p && !!p.steamId64).sort((a, b) => {
+            let res = 0;
+            switch (sortBy) {
+                case 'name': 
+                    res = (a.displayName || a.personaName || "").localeCompare(b.displayName || b.personaName || "");
+                    break;
+                case 'age':
+                    res = (Number(a.timeCreated) || 0) - (Number(b.timeCreated) || 0);
+                    break;
+                case 'bans':
+                    res = ((Number(a.numberOfVacBans) || 0) + (Number(a.numberOfGameBans) || 0)) - 
+                          ((Number(b.numberOfVacBans) || 0) + (Number(b.numberOfGameBans) || 0));
+                    break;
+                case 'last_updated': 
+                default: 
+                    res = (Number(a.lastUpdated) || 0) - (Number(b.lastUpdated) || 0);
+                    break;
             }
-        }
+            return res * orderMod;
+        });
+    }, [players, sortBy, sortOrder]);
 
-        return true;
-    }).sort((a, b) => {
-        switch (sortBy) {
-            case 'name': return a.displayName.localeCompare(b.displayName);
-            case 'age': return (a.timeCreated || 0) - (b.timeCreated || 0);
-            case 'bans': return (b.numberOfVacBans + b.numberOfGameBans) - (a.numberOfVacBans + a.numberOfGameBans);
-            case 'last_updated': default: return (b.lastUpdated || 0) - (a.lastUpdated || 0);
-        }
-    });
-
-    // --- INFINITE SCROLL LOGIC ---
     useEffect(() => {
-        setDisplayLimit(50); // Reset limit when search parameters change
-    }, [searchTerm, selectedColor, sortBy, players]);
+        setDisplayLimit(50);
+    }, [searchTerm, selectedColor, sortBy, sortOrder, players]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
-                if (entries[0].isIntersecting && displayLimit < filteredResults.length) {
-                    setDisplayLimit(prev => Math.min(prev + 50, filteredResults.length));
+                if (entries[0].isIntersecting && displayLimit < sortedResults.length) {
+                    setDisplayLimit(prev => Math.min(prev + 50, sortedResults.length));
                 }
             },
             { threshold: 0.1, rootMargin: '200px' }
         );
-
-        if (loadMoreRef.current) {
-            observer.observe(loadMoreRef.current);
-        }
-
+        if (loadMoreRef.current) observer.observe(loadMoreRef.current);
         return () => observer.disconnect();
-    }, [filteredResults.length, displayLimit]);
+    }, [sortedResults.length, displayLimit]);
 
-    const visibleResults = filteredResults.slice(0, displayLimit);
+    const visibleResults = sortedResults.slice(0, displayLimit);
 
+    const handleCreateGroup = () => {
+        if (!selectedColor || !onUpdateGroups) return;
+        const name = prompt("Enter group name:");
+        if (!name) return;
+        const colors = selectedColor.split(',');
+        const newGroup: ColorGroup = {
+            id: Date.now().toString(),
+            name,
+            colors
+        };
+        onUpdateGroups([...colorGroups, newGroup]);
+    };
 
+    const handleDeleteGroup = (e: React.MouseEvent, id: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!onUpdateGroups) return;
+        if (confirm("Delete this group?")) {
+            onUpdateGroups(colorGroups.filter(g => g.id !== id));
+        }
+    };
+
+    const handleColorContextMenu = (e: React.MouseEvent, color: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const isFavorite = favoriteColors.includes(color);
+        if (isFavorite) {
+            if (onRemoveFavoriteColor) onRemoveFavoriteColor(color);
+        } else {
+            if (onAddFavoriteColor) onAddFavoriteColor(color);
+        }
+    };
 
     return (
-
         <div className={styles.container}>
-
             <main className={styles.mainArea}>
-
                 <div className={styles.toolbar}>
-
-                    <span className={styles.resultsCount}>
-
-                        Found <b>{filteredResults.length}</b> players
-
-                    </span>
-
-
-
+                    <span className={styles.resultsCount}>Found <b>{sortedResults.length}</b> players</span>
                     <div className={styles.sortGroup}>
-
                         <SortAsc size={14} />
-
                         <span>Sort by:</span>
-
                         <select className={styles.select} value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-
                             <option value="last_updated">Last Updated</option>
-
                             <option value="name">Name (A-Z)</option>
-
                             <option value="age">Account Age</option>
-
                             <option value="bans">Ban Count</option>
-
                         </select>
-
+                        <button 
+                            onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                            title={`Order: ${sortOrder === 'asc' ? 'Ascending' : 'Descending'}`}
+                            style={{ 
+                                background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', padding: '4px', borderRadius: '4px',
+                                transition: 'all 0.2s', transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none'
+                            }}
+                        >
+                            <ArrowUpDown size={14} />
+                        </button>
                     </div>
-
                 </div>
-
-
 
                 <div className={styles.resultsList} style={{ opacity: isLoading ? 0.5 : 1, transition: 'opacity 0.2s', pointerEvents: isLoading ? 'none' : 'auto' }}>
                     {isLoading && (
@@ -226,32 +204,17 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
                             <div className="loader"></div>
                         </div>
                     )}
-                    {filteredResults.length > 0 ? (
-
+                    {sortedResults.length > 0 ? (
                         <div className="cardGrid">
-
-                            {visibleResults.map(player => (
-
-                                <PlayerCard
-                                    key={player.steamId64}
-                                    player={player}
-                                    avatarPriority={enableAvatarCdn ? 'cdn' : 'cache'}
-                                    isDatabaseEntry={true}
-                                    onContextMenu={onContextMenu}
-                                    onAvatarContextMenu={onAvatarContextMenu}
-                                />
-
+                            {visibleResults.map((player: Player) => (
+                                <PlayerCard key={player.steamId64} player={player} avatarPriority={enableAvatarCdn ? 'cdn' : 'cache'} isDatabaseEntry={true} onContextMenu={onContextMenu} onAvatarContextMenu={onAvatarContextMenu} />
                             ))}
-
-                            {/* Sentinel for infinite scroll */}
-                            {displayLimit < filteredResults.length && (
+                            {displayLimit < sortedResults.length && (
                                 <div ref={loadMoreRef} style={{ height: 20, width: '100%', gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <div className="loader" style={{ width: 20, height: 20 }}></div>
                                 </div>
                             )}
-
                         </div>
-
                     ) : (
                         !isLoading && (
                             <div className={styles.emptyState}>
@@ -263,118 +226,78 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
                 </div>
             </main>
 
-            <div
-                className={`${styles.resizeHandle} ${isResizing ? styles.resizeHandleActive : ''}`}
-                onMouseDown={startResizing}
-            />
+            <div className={`${styles.resizeHandle} ${isResizing ? styles.resizeHandleActive : ''}`} onMouseDown={startResizing} />
 
             <aside className={styles.searchSidebar} style={{ width: sidebarWidth }}>
                 <div className={styles.section}>
                     <span className={styles.sectionTitle}>Search Database</span>
-                    <input
-                        type="text"
-                        className={styles.input}
-                        placeholder="Search name or SteamID..."
-                        value={searchTerm}
-                        onChange={(e) => {
-                            onSearchChange(e.target.value, caseSensitive, selectedColor, vacBanned, gameBanned, communityBanned, economyBanned);
-                        }}
-                    />
+                    <input type="text" className={styles.input} placeholder="Search name or SteamID..." value={searchTerm} onChange={(e) => onSearchChange(e.target.value, caseSensitive, selectedColor, vacBanned, gameBanned, communityBanned, economyBanned)} />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <label className={styles.checkboxLabel}>
-                            <input
-                                type="checkbox"
-                                className={styles.checkbox}
-                                checked={exactMatch}
-                                onChange={(e) => setExactMatch(e.target.checked)}
-                            />
-                            Exact Match
+                            <input type="checkbox" className={styles.checkbox} checked={exactMatch} onChange={(e) => setExactMatch(e.target.checked)} /> Exact Match
                         </label>
                         <label className={styles.checkboxLabel}>
-                            <input
-                                type="checkbox"
-                                className={styles.checkbox}
-                                checked={caseSensitive}
-                                onChange={(e) => {
-                                    onSearchChange(searchTerm, e.target.checked, selectedColor, vacBanned, gameBanned, communityBanned, economyBanned);
-                                }}
-                            />
-                            Case Sensitive
+                            <input type="checkbox" className={styles.checkbox} checked={caseSensitive} onChange={(e) => onSearchChange(searchTerm, e.target.checked, selectedColor, vacBanned, gameBanned, communityBanned, economyBanned)} /> Case Sensitive
                         </label>
                     </div>
                 </div>
 
                 <div className={styles.section}>
-                    <span className={styles.sectionTitle}>Filter by Color</span>
+                    <span className={styles.sectionTitle}>Filter by Group / Color</span>
                     <div className={styles.colorList}>
                         <div
                             className={`${styles.colorItem} ${!selectedColor ? styles.colorItemActive : ''}`}
                             style={{ background: 'radial-gradient(circle at 30% 25%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 10%, transparent 45%), linear-gradient(45deg, #333, #666)' }}
-                            onClick={() => {
-                                setSelectedColor(null);
-                                onSearchChange(searchTerm, caseSensitive, null, vacBanned, gameBanned, communityBanned, economyBanned);
-                            }}
-                            title="All colors"
+                            onClick={() => onSearchChange(searchTerm, caseSensitive, null, vacBanned, gameBanned, communityBanned, economyBanned)}
+                            title="All players"
                         />
-                        {(favoriteColors && favoriteColors.length > 0 ? favoriteColors : MOCK_COLORS).map(c => {
-                            const style = (() => {
-                                if (c.includes(';')) {
-                                    const [a, b] = c.split(';');
-                                    return { background: `radial-gradient(circle at 30% 25%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 8%, transparent 40%), linear-gradient(135deg, ${a}, ${b})` };
-                                } else {
-                                    return { background: `radial-gradient(circle at 30% 25%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 8%, transparent 40%), ${c}` };
-                                }
-                            })();
-                            
+                        {colorGroups.map((g: ColorGroup) => {
+                            const style = g.colors.length > 1 
+                                ? { background: `conic-gradient(${g.colors.map((c, i) => `${c} ${i * (100 / g.colors.length)}% ${(i + 1) * (100 / g.colors.length)}%`).join(', ')})` }
+                                : { background: g.colors[0] || '#333' };
+                            const fv = g.colors.join(',');
                             return (
-                                <div
-                                    key={c}
-                                    className={`${styles.colorItem} ${selectedColor === c ? styles.colorItemActive : ''}`}
-                                    style={style}
-                                    onClick={() => {
-                                        setSelectedColor(c);
-                                        onSearchChange(searchTerm, caseSensitive, c, vacBanned, gameBanned, communityBanned, economyBanned);
-                                    }}
-                                    title={c}
-                                />
+                                <div key={g.id} className={`${styles.colorItem} ${selectedColor === fv ? styles.colorItemActive : ''}`} style={style}
+                                    onClick={() => onSearchChange(searchTerm, caseSensitive, fv, vacBanned, gameBanned, communityBanned, economyBanned)}
+                                    onContextMenu={(e) => handleDeleteGroup(e, g.id)}
+                                    title={`${g.name} (Right-click to delete)`} />
+                            );
+                        })}
+                        
+                        {(dbUniqueColors.length > 0 || favoriteColors.length > 0) && <div style={{width: '100%', height: 1, backgroundColor: 'rgba(255,255,255,0.05)', margin: '4px 0'}} />}
+
+                        {[...new Set([...favoriteColors, ...dbUniqueColors])].filter(c => typeof c === 'string' && c.length > 0).map((c: string) => {
+                            const style = c.includes(';') ? { background: `linear-gradient(135deg, ${c.split(';')[0]}, ${c.split(';')[1]})` } : { background: c };
+                            const isFav = favoriteColors.includes(c);
+                            return (
+                                <div key={c} className={`${styles.colorItem} ${selectedColor === c ? styles.colorItemActive : ''}`} style={style}
+                                    onClick={() => onSearchChange(searchTerm, caseSensitive, c, vacBanned, gameBanned, communityBanned, economyBanned)}
+                                    onContextMenu={(e) => handleColorContextMenu(e, c)}
+                                    title={`${c} ${isFav ? '(Pinned)' : '(Right-click to pin)'}`} />
                             );
                         })}
                     </div>
+                    {selectedColor && !selectedColor.includes(',') && (
+                        <button className={styles.btnSmall} style={{ width: '100%', marginTop: 8, padding: '4px', fontSize: 11, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', borderRadius: 4, color: 'var(--text-secondary)', cursor: 'pointer' }}
+                            onClick={handleCreateGroup}>
+                            Create Group from Selection
+                        </button>
+                    )}
                 </div>
 
                 <div className={styles.section}>
                     <span className={styles.sectionTitle}>Ban Status</span>
                     <label className={styles.checkboxLabel}>
-                        <input 
-                            type="checkbox" 
-                            className={styles.checkbox} 
-                            checked={vacBanned}
-                            onChange={(e) => onSearchChange(searchTerm, caseSensitive, selectedColor, e.target.checked, gameBanned, communityBanned, economyBanned)}
-                        /> VAC Banned
+                        <input type="checkbox" className={styles.checkbox} checked={vacBanned} onChange={(e) => onSearchChange(searchTerm, caseSensitive, selectedColor, e.target.checked, gameBanned, communityBanned, economyBanned)} /> VAC Banned
                     </label>
                     <label className={styles.checkboxLabel}>
-                        <input 
-                            type="checkbox" 
-                            className={styles.checkbox} 
-                            checked={gameBanned}
-                            onChange={(e) => onSearchChange(searchTerm, caseSensitive, selectedColor, vacBanned, e.target.checked, communityBanned, economyBanned)}
-                        /> Game Banned
+                        <input type="checkbox" className={styles.checkbox} checked={gameBanned} onChange={(e) => onSearchChange(searchTerm, caseSensitive, selectedColor, vacBanned, e.target.checked, communityBanned, economyBanned)} /> Game Banned
                     </label>
                     <label className={styles.checkboxLabel}>
-                        <input 
-                            type="checkbox" 
-                            className={styles.checkbox} 
-                            checked={communityBanned}
-                            onChange={(e) => onSearchChange(searchTerm, caseSensitive, selectedColor, vacBanned, gameBanned, e.target.checked, economyBanned)}
-                        /> Community Banned
+                        <input type="checkbox" className={styles.checkbox} checked={communityBanned} onChange={(e) => onSearchChange(searchTerm, caseSensitive, selectedColor, vacBanned, gameBanned, e.target.checked, economyBanned)} /> Community Banned
                     </label>
                     <label className={styles.checkboxLabel}>
-                        <input 
-                            type="checkbox" 
-                            className={styles.checkbox} 
-                            checked={economyBanned}
-                            onChange={(e) => onSearchChange(searchTerm, caseSensitive, selectedColor, vacBanned, gameBanned, communityBanned, e.target.checked)}
-                        /> Economy Banned
+                        <input type="checkbox" className={styles.checkbox} checked={economyBanned} onChange={(e) => onSearchChange(searchTerm, caseSensitive, selectedColor, vacBanned, gameBanned, communityBanned, e.target.checked)} /> Economy Banned
                     </label>
                 </div>
             </aside>
